@@ -1,0 +1,254 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Graphite Hush (DESIGN.md) mapped onto shadcn's semantic tokens.
+ * Light values are DESIGN.md's unsuffixed colours, dark values its `-dark` ones.
+ * Dark mode follows the OS only: there is no `.dark` class and no toggle, so
+ * Tailwind's `dark:` variant keeps its default `prefers-color-scheme` media query.
+ */
+
+@theme inline {
+  /* Typography: the system UI stack replaces shadcn's Geist; monospace is for kbd only. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* shadcn semantic colours */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* App-specific colours */
+  --color-ring-on-toast: var(--ring-on-toast);
+  --color-overdue: var(--overdue);
+  --color-overdue-tint: var(--overdue-tint);
+  --color-in-progress: var(--in-progress);
+  --color-finished: var(--finished);
+  --color-row-hover: var(--row-hover);
+  --color-row-selected: var(--row-selected);
+  --color-toast-background: var(--toast-background);
+  --color-toast-foreground: var(--toast-foreground);
+  --color-toast-action: var(--toast-action);
+}
+
+/* Plain (not inline) so components can read these as CSS variables, e.g. var(--radius-md). */
+@theme {
+  /*
+   * Radii (DESIGN.md `rounded`): controls 10px (`rounded-md`), surfaces 12px
+   * (`rounded-lg`), keyboard hints 4px (`rounded-xs`), chips `rounded-full`.
+   */
+  --radius-xs: var(--radius-hint);
+  --radius-sm: calc(var(--radius-control) * 0.8);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Minimum interactive target (`h-min-target`, `size-min-target`, ...). */
+  --spacing-min-target: var(--min-target);
+}
+
+:root {
+  color-scheme: light dark;
+
+  --radius: 12px;
+  --radius-control: 10px;
+  --radius-hint: 4px;
+  --ring-width: 2px;
+  --ring-offset: 2px;
+  --min-target: 24px;
+  --fade-duration: 180ms;
+
+  --background: #F4F4F3;
+  --foreground: #1F1F1F;
+  --card: #FFFFFF;
+  --card-foreground: #1F1F1F;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F1F1F;
+  --muted-foreground: #5F5F5F;
+  --border: #E2E2E0;
+  --input: #8A8A8A;
+  --ring: #1F1F1F;
+  --ring-on-toast: #F4F4F3;
+  --primary: #1F1F1F;
+  --primary-foreground: #FFFFFF;
+  --accent: #F7F7F6;
+  --accent-foreground: #1F1F1F;
+  --destructive: #1F1F1F;
+  --destructive-foreground: #FFFFFF;
+  --overdue: #C2341A;
+  --overdue-tint: #FDEEEA;
+  --in-progress: #3D3D3D;
+  --finished: #6A6A6A;
+  --row-hover: #F7F7F6;
+  --row-selected: #F0F0EE;
+  --toast-background: #1F1F1F;
+  --toast-foreground: #F4F4F3;
+  --toast-action: #FF8A70;
+
+  /* Not in DESIGN.md: inherited from shadcn's neutral base. */
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #161616;
+    --foreground: #EAEAEA;
+    --card: #1E1E1E;
+    --card-foreground: #EAEAEA;
+    --popover: #1E1E1E;
+    --popover-foreground: #EAEAEA;
+    --muted-foreground: #A0A0A0;
+    --border: #333333;
+    --input: #707070;
+    --ring: #EAEAEA;
+    --ring-on-toast: #161616;
+    --primary: #EAEAEA;
+    --primary-foreground: #161616;
+    --accent: #242424;
+    --accent-foreground: #EAEAEA;
+    --destructive: #EAEAEA;
+    --destructive-foreground: #161616;
+    --overdue: #FF7A5C;
+    --overdue-tint: #352019;
+    --in-progress: #CFCFCF;
+    --finished: #9A9A9A;
+    --row-hover: #242424;
+    --row-selected: #262626;
+    --toast-background: #EAEAEA;
+    --toast-foreground: #161616;
+    --toast-action: #B32E15;
+
+    /* Not in DESIGN.md: inherited from shadcn's neutral base. */
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
+}
+
+/*
+ * The one focus ring (DESIGN.md Components > Focus ring): a solid 2px outline in
+ * `ring` at full opacity, offset 2px so the surface behind shows between the
+ * control and the ring. Outline (not box-shadow) so the gap is always the real
+ * surface. Override the colour locally with `[--ring:...]`, e.g. on the toast.
+ */
+@utility focus-ring {
+  &:focus-visible {
+    outline: var(--ring-width) solid var(--ring);
+    outline-offset: var(--ring-offset);
+  }
+}
+
+/* Every interactive target is at least 24px (WCAG 2.5.8). */
+@utility min-target {
+  min-height: var(--min-target);
+  min-width: var(--min-target);
+}
+
+/* The only motion: a 180ms opacity fade, switched off under reduced motion. */
+@utility fade {
+  transition-property: opacity;
+  transition-duration: var(--fade-duration);
+  transition-timing-function: ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* Reduced motion: stop every animation and transition (CSS only; no timer changes). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* Base focus ring for anything without its own classes (links, native controls). */
+  :focus-visible {
+    outline: var(--ring-width) solid var(--ring);
+    outline-offset: var(--ring-offset);
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  kbd {
+    @apply font-mono;
+  }
+}
