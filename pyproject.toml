@@ -53,3 +53,4 @@ extend-select = ["DTZ", "TID251"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
