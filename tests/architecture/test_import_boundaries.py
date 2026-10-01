@@ -10,7 +10,7 @@ import pytest
 ROOT_PACKAGE = "bmad_first_project"
 PACKAGE_DIR = Path(__file__).resolve().parents[2] / "src" / ROOT_PACKAGE
 COMPOSITION_ROOTS = {f"{ROOT_PACKAGE}.main", f"{ROOT_PACKAGE}.cli"}
-ORM_PACKAGES = {"sqlmodel", "sqlalchemy"}
+ORM_PACKAGES = {"sqlmodel", "sqlalchemy", "alembic"}
 
 
 @dataclass(frozen=True)
@@ -78,7 +78,7 @@ def _violation(importer: str, target: str) -> str | None:
     if target.split(".")[0] in ORM_PACKAGES and not _within(
         importer, f"{ROOT_PACKAGE}.adapters.persistence"
     ):
-        return "SQLModel/SQLAlchemy may only be imported under adapters/persistence"
+        return "SQLModel/SQLAlchemy/Alembic may only be imported under adapters/persistence"
 
     if layer == "domain":
         if internal and not _within(target, f"{ROOT_PACKAGE}.domain"):
@@ -175,6 +175,9 @@ FORBIDDEN = [
     ),
     pytest.param(f"{P}.main", "import sqlalchemy", id="sqlalchemy-in-main"),
     pytest.param(
+        f"{P}.cli", "from alembic import command", id="alembic-outside-persistence"
+    ),
+    pytest.param(
         f"{P}.application.use_cases",
         "from ..adapters import clock",
         id="relative-application-imports-adapter",
@@ -231,6 +234,11 @@ ALLOWED = [
         f"{P}.adapters.persistence.repo",
         "from sqlmodel import Session",
         id="sqlmodel-in-persistence",
+    ),
+    pytest.param(
+        f"{P}.adapters.persistence.schema",
+        f"from alembic.config import Config\nfrom {P}.settings import Settings",
+        id="alembic-and-settings-in-persistence",
     ),
     pytest.param(
         f"{P}.cli", f"from {P}.adapters.clock import SystemClock", id="cli-adapter"

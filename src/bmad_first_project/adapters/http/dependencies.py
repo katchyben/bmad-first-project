@@ -1,7 +1,7 @@
 """Request-scoped FastAPI dependencies."""
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, Request
 
@@ -11,6 +11,15 @@ from bmad_first_project.application.ports import Clock
 def get_clock(request: Request) -> Clock:
     """Return the clock wired into the app by the composition root."""
     return request.app.state.clock
+
+
+def get_engine(request: Request) -> Any:
+    """Return the database engine wired into the app by the composition root.
+
+    Typed `Any` because SQLAlchemy may only be imported under
+    `adapters/persistence`; the value is that adapter's `Engine`.
+    """
+    return request.app.state.engine
 
 
 def get_now(clock: Annotated[Clock, Depends(get_clock)]) -> datetime:

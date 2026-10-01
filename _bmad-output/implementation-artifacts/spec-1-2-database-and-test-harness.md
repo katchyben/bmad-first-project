@@ -2,9 +2,10 @@
 title: 'Story 1.2a: Database, migrations and test harness'
 type: 'feature'
 created: '2026-10-01'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: '8f77105312cc5cbcd7123e8f8020108571b496f8'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
 ---
@@ -51,15 +52,15 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/bmad_first_project/settings.py` -- `Settings(BaseSettings)` with `database_url` -- AR16
-- [ ] `src/bmad_first_project/adapters/persistence/engine.py` -- `make_engine(url)` plus the FK pragma listener -- AR5
-- [ ] `src/bmad_first_project/adapters/persistence/types.py` -- the `UTCDateTime` `TypeDecorator`: aware in, UTC with microseconds stored, UTC re-attached on read -- AR4
-- [ ] `alembic.ini` (project root, `script_location` pointing into the package), `src/bmad_first_project/adapters/persistence/alembic/{env.py,script.py.mako,versions/0001_baseline.py}` -- `target_metadata = SQLModel.metadata`; an empty baseline -- AR5
-- [ ] `src/bmad_first_project/adapters/persistence/schema.py` -- `assert_schema_current(engine)`, which builds its Alembic `Config` from the package path so it works from any cwd -- AR5
-- [ ] `src/bmad_first_project/adapters/http/dependencies.py`, `main.py` -- `get_engine`; the engine wiring and schema check in `create_app` -- AR5
-- [ ] `tests/conftest.py` -- `migrated_engine` (a file DB under `tmp_path`, upgraded through Alembic with `config.attributes["url"]`), `fake_clock`, and `make_app` → `create_app(clock, engine)`; move the existing API tests onto it -- AR5, NFR6
-- [ ] `tests/persistence/test_engine_and_types.py`, `tests/persistence/test_migrations.py` -- every matrix row; the round-trip test uses a scratch table created in the test, never in the app -- NFR6
-- [ ] `tests/architecture/test_import_boundaries.py` -- add `alembic` to `ORM_PACKAGES` -- AR4
+- [x] `src/bmad_first_project/settings.py` -- `Settings(BaseSettings)` with `database_url` -- AR16
+- [x] `src/bmad_first_project/adapters/persistence/engine.py` -- `make_engine(url)` plus the FK pragma listener -- AR5
+- [x] `src/bmad_first_project/adapters/persistence/types.py` -- the `UTCDateTime` `TypeDecorator`: aware in, UTC with microseconds stored, UTC re-attached on read -- AR4
+- [x] `alembic.ini` (project root, `script_location` pointing into the package), `src/bmad_first_project/adapters/persistence/alembic/{env.py,script.py.mako,versions/0001_baseline.py}` -- `target_metadata = SQLModel.metadata`; an empty baseline -- AR5
+- [x] `src/bmad_first_project/adapters/persistence/schema.py` -- `assert_schema_current(engine)`, which builds its Alembic `Config` from the package path so it works from any cwd -- AR5
+- [x] `src/bmad_first_project/adapters/http/dependencies.py`, `main.py` -- `get_engine`; the engine wiring and schema check in `create_app` -- AR5
+- [x] `tests/conftest.py` -- `migrated_engine` (a file DB under `tmp_path`, upgraded through Alembic with `config.attributes["url"]`), `fake_clock`, and `make_app` → `create_app(clock, engine)`; move the existing API tests onto it -- AR5, NFR6
+- [x] `tests/persistence/test_engine_and_types.py`, `tests/persistence/test_migrations.py` -- every matrix row; the round-trip test uses a scratch table created in the test, never in the app -- NFR6
+- [x] `tests/architecture/test_import_boundaries.py` -- add `alembic` to `ORM_PACKAGES` -- AR4
 
 **Acceptance Criteria:**
 - Given the repo, when `uv run ruff check .`, `uv run ruff format --check .` and `uv run pytest` run, then all pass, and `grep -rn create_all src` finds nothing.
@@ -70,6 +71,35 @@ context:
 ## Spec Change Log
 
 ## Review Triage Log
+
+Pass 1 (blind = B, edge-case = E, verification-gap = V):
+
+| # | Finding | Verdict | Evidence | Route |
+|---|---------|---------|----------|-------|
+| B5/E9 | `script.py.mako` always imports `sa`/`sqlmodel`, so op-only migrations fail F401 | medium | Linted a template-shaped `versions/0002_x.py`: F401 for both. The `sqlmodel` import is the usual SQLModel need (autogen `AutoString`), so keep it and exempt `versions/` from F401 | patch |
+| V1 | The real CLI path (`alembic.ini` logging via `fileConfig`) is never run by a test | medium | Every test sets `configure_logger=False`; a broken logging section would crash `uv run alembic upgrade head` with all tests green | patch |
+| B12c | FK tests only read the pragma; no violating insert is shown to fail | low | Confirmed: there's no enforcement test; a direct test addition | patch |
+| V2 | FKs stay on during migrations, so batch table rebuilds can cascade-delete child rows | medium | Real once a referenced table is batch-altered; no tables exist yet, so the fix guards an undemonstrated state | defer |
+| B1 | `env.py` imports no model modules, so autogenerate would see empty metadata | low | Real once 1.4 adds the first table; nothing to import yet | defer (with naming convention) |
+| B3 | No constraint naming convention on `SQLModel.metadata` | low | Cheapest to set with the first table (1.4) | defer (with B1) |
+| B2 | Generated migrations won't import `UTCDateTime`; `compare_type` not set | false | Alembic's autogenerate adds imports for user-defined types' modules, and `compare_type` defaults on in Alembic ≥ 1.12 | reject |
+| B4 | Sequential `0001` vs random generated revision IDs | low | Cosmetic; mixing styles is harmless | reject |
+| B6a/E3/V3 | The default DB path is cwd-relative | low | The frozen intent fixes the default `sqlite:///./data/app.db`; commands run from the project root | reject (per intent) |
+| B6b | `data/` not gitignored | false | `.gitignore:17` has `data/` (since 1.1a) | reject |
+| B7/E1/E2 | The engine isn't disposed on refusal or shutdown | low | The process exits on refusal; single-process local app; a lifespan hook adds complexity | reject |
+| B8 | The schema check runs at build time, not startup | low | The frozen intent says `create_app()` refuses to start | reject (per intent) |
+| B9/E4 | A refused start still creates an empty DB file | low | Real (SQLite creates it on connect), but harmless: the next run gives the same message | reject |
+| B10 | No `busy_timeout`/WAL; in-memory pool trap | low | Single-user local app; no in-memory engines are used | reject |
+| B11/E8 | `process_result_value` relabels aware values | low | Verified: a raw-SQL `'…12:00:00+02:00'` reads back as 12:00 UTC, but SQLAlchemy's SQLite parser drops the offset before the decorator, so the proposed fix wouldn't help; the app never writes raw SQL | reject |
+| B12a/b | `TypeError` branch, `microsecond=0`, DST storage untested | low | The type contract is covered by the round-trip and naive tests | reject |
+| B13 | The ALLOWED case claims `schema` imports `Settings` | false | It's a synthetic module source checked by the pure checker, not a claim about the real file | reject |
+| B14 | Loose test typing, duplicate `MakeApp`/`FIXED`, leftover alias | low | Cosmetic | reject |
+| B15/E10 | Engines created in tests aren't disposed | low | No ResourceWarnings in the run; macOS `tmp_path` cleanup is unaffected | reject |
+| B16 | Every API test runs a full migration | low | 87 tests in 0.9 s | reject |
+| B17 | `get_engine` returns `Any` and invites bypassing the UoW | low | 1.2b adds the UoW on top; typed `Any` because of the import boundary | reject |
+| B18 | The diff omits `pyproject.toml`/lock/spec | false | Deps were pinned in 1.1a; the spec goes to the edge-case layer only | reject |
+| E5/E6 | Malformed or empty `DATABASE_URL` gives a raw `ArgumentError` | false | Loud failure on bad config | reject |
+| E7 | A `file:` database name without `uri=true` | low | Contrived; the default and the tests never use it | reject |
 
 ## Design Notes
 

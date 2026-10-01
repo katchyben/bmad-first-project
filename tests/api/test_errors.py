@@ -1,5 +1,6 @@
 """Every failure response is the error envelope in the calm UX voice."""
 
+from collections.abc import Callable
 from datetime import datetime
 
 import pytest
@@ -15,7 +16,6 @@ from bmad_first_project.domain.errors import (
     StateConflictError,
     UnauthenticatedError,
 )
-from bmad_first_project.main import create_app
 
 VALIDATION_BODY = {
     "error": {
@@ -31,8 +31,8 @@ class StrictBody(BaseModel):
     title: str
 
 
-def _app() -> FastAPI:
-    app = create_app()
+def _app(make_app: Callable[[], FastAPI]) -> FastAPI:
+    app = make_app()
 
     @app.get("/_test/get-only")
     def get_only() -> dict[str, str]:
@@ -84,8 +84,8 @@ def _app() -> FastAPI:
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(_app())
+def client(make_app: Callable[[], FastAPI]) -> TestClient:
+    return TestClient(_app(make_app))
 
 
 def test_unknown_route_is_not_found_envelope(client: TestClient) -> None:
@@ -227,8 +227,8 @@ def test_other_framework_error_keeps_status_with_generic_envelope(
     }
 
 
-def test_bare_domain_error_is_not_mapped() -> None:
-    app = _app()
+def test_bare_domain_error_is_not_mapped(make_app: Callable[[], FastAPI]) -> None:
+    app = _app(make_app)
 
     @app.get("/_test/raise/bare")
     def raise_bare() -> None:

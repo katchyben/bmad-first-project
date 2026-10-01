@@ -50,6 +50,7 @@ extend-select = ["DTZ", "TID251"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/bmad_first_project/adapters/clock.py" = ["TID251"]
+"src/bmad_first_project/adapters/persistence/alembic/versions/*.py" = ["F401"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
