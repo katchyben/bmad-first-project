@@ -1,0 +1,3 @@
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-backend-structure-and-guard-rails.md`
+  summary: Story 1.1b — error envelope and OpenAPI contract: domain error types, one exception-handler module mapping them plus request-validation and Starlette 401/404/405 to the calm-voice envelope with fixed messages, `ErrorResponse` always in the OpenAPI schema, and operation IDs equal to route function names.
+  evidence: The Story 1.1 spec came to about 2,100 tokens (over 1,600), and the user chose to split it; the error contract is a separately reviewable deliverable on top of the structure and time guard rails. Build it next: Story 1.2 onward relies on the envelope.
