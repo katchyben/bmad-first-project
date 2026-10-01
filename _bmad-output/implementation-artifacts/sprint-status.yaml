@@ -1,0 +1,63 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 10-01-2026 16:41
+last_updated: 10-01-2026 16:41
+project: bmad-first-project
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-backend-structure-and-guard-rails: backlog
+  1-2-database-and-test-harness: backlog
+  1-3-frontend-skeleton-with-generated-api-client: backlog
+  1-4-create-the-account-from-the-command-line: backlog
+  1-5-log-in-and-log-out-through-the-api: backlog
+  1-6-log-in-and-out-in-the-web-app: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-create-a-task-through-the-api: backlog
+  2-2-view-my-tasks-in-urgency-order-through-the-api: backlog
+  2-3-edit-a-task-through-the-api: backlog
+  2-4-delete-a-task-through-the-api: backlog
+  2-5-see-and-add-tasks-in-the-web-app: backlog
+  2-6-edit-and-delete-tasks-in-the-web-app: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-start-a-task-and-move-it-back-through-the-api: backlog
+  3-2-complete-or-cancel-a-task-through-the-api: backlog
+  3-3-undo-completing-or-cancelling-through-the-api: backlog
+  3-4-filter-tasks-by-status-through-the-api: backlog
+  3-5-move-tasks-through-their-statuses-in-the-web-app-with-undo: backlog
+  3-6-finished-section-and-status-filter-in-the-web-app: backlog
+  epic-3-retrospective: optional

@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Color Themes - Round 1</title>
+<style>
+/* Calm &amp; minimal todo app - colour theme exploration, round 1.
+   Every variation shows Light and Dark side by side. Hex values + WCAG contrast ratios
+   per mode are documented in the comment block above each variation's variables.
+   Overdue is never colour-only: triangle icon + "Overdue" text label + left rule. */
+* { box-sizing: border-box; }
+body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background:#ECECEA; color:#1F1F1F; }
+.page-head { max-width:1320px; margin:0 auto; padding:40px 32px 8px; }
+.page-head h1 { margin:0 0 6px; font-size:26px; font-weight:600; letter-spacing:-.01em; }
+.page-head p { margin:0; color:#555; max-width:820px; line-height:1.5; font-size:14px; }
+.variation { max-width:1320px; margin:28px auto; padding:0 32px; }
+.vh { display:flex; gap:16px; align-items:flex-start; margin-bottom:14px; }
+.num { font-size:13px; font-weight:600; color:#777; padding-top:5px; font-variant-numeric:tabular-nums; }
+.vh h2 { margin:0; font-size:20px; font-weight:600; }
+.reg { margin:4px 0 2px; color:#444; font-size:14px; }
+.odn { margin:0; color:#666; font-size:12.5px; }
+.pair { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+/* ===== Paper & Graphite ===== */
+/* LIGHT MODE
+   --bg           #F6F2EA   (background)
+   --surface      #FFFDF8   (surface)
+   --text         #2A2723   (text)
+   --muted        #6B645A   (muted text)
+   --border       #E4DDD0   (border / divider)
+   --accent       #3F5A6B   (accent)
+   --onAccent     #FFFFFF   (on accent)
+   --overdue      #A3401F   (overdue)
+   --overdueTint  #FBEDE6   (overdue tint)
+   --progress     #3F5A6B   (in progress)
+   --done         #6B6A5E   (done)
+   --cancelled    #7A6E68   (cancelled)
+   --danger       #9E2F24   (danger)
+   --toastBg      #2A2723   (undo toast bg)
+   --toastText    #F6F2EA   (undo toast text)
+   --toastAction  #F2B48E   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 13.31:1  AAA
+     text on surface                            14.62:1  AAA
+     muted on surface                            5.75:1  AA
+     on-accent on accent                         7.28:1  AAA
+     accent on surface (focus ring / link)       7.16:1  AA non-text 3:1
+     overdue on overdue tint                     5.55:1  AA
+     overdue on surface                          6.24:1  AA
+     in-progress on surface                      7.16:1  AAA
+     done on surface                             5.37:1  AA
+     cancelled on surface                        4.85:1  AA
+     danger on surface                           7.16:1  AAA
+     toast text on toast bg                     13.31:1  AAA
+     undo action on toast bg                     8.28:1  AAA
+     border on surface (decorative, not text)    1.33:1  decorative
+*/
+/* DARK MODE
+   --bg           #1C1A17   (background)
+   --surface      #24221E   (surface)
+   --text         #ECE6DA   (text)
+   --muted        #A79F92   (muted text)
+   --border       #3A362F   (border / divider)
+   --accent       #9DBBCC   (accent)
+   --onAccent     #1C1A17   (on accent)
+   --overdue      #F09A74   (overdue)
+   --overdueTint  #3A2620   (overdue tint)
+   --progress     #9DBBCC   (in progress)
+   --done         #A3A293   (done)
+   --cancelled    #ACA099   (cancelled)
+   --danger       #F08A7E   (danger)
+   --toastBg      #ECE6DA   (undo toast bg)
+   --toastText    #1C1A17   (undo toast text)
+   --toastAction  #9A3A1C   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 13.97:1  AAA
+     text on surface                            12.78:1  AAA
+     muted on surface                            6.06:1  AA
+     on-accent on accent                         8.61:1  AAA
+     accent on surface (focus ring / link)       7.87:1  AA non-text 3:1
+     overdue on overdue tint                     6.48:1  AA
+     overdue on surface                          7.24:1  AAA
+     in-progress on surface                      7.87:1  AAA
+     done on surface                             6.16:1  AA
+     cancelled on surface                        6.23:1  AA
+     danger on surface                           6.53:1  AA
+     toast text on toast bg                     13.97:1  AAA
+     undo action on toast bg                     5.64:1  AA
+     border on surface (decorative, not text)    1.32:1  decorative
+*/
+.paper.light { --bg:#F6F2EA; --surface:#FFFDF8; --text:#2A2723; --muted:#6B645A; --border:#E4DDD0; --accent:#3F5A6B; --onAccent:#FFFFFF; --overdue:#A3401F; --overdueTint:#FBEDE6; --progress:#3F5A6B; --done:#6B6A5E; --cancelled:#7A6E68; --danger:#9E2F24; --toastBg:#2A2723; --toastText:#F6F2EA; --toastAction:#F2B48E; }
+.paper.dark { --bg:#1C1A17; --surface:#24221E; --text:#ECE6DA; --muted:#A79F92; --border:#3A362F; --accent:#9DBBCC; --onAccent:#1C1A17; --overdue:#F09A74; --overdueTint:#3A2620; --progress:#9DBBCC; --done:#A3A293; --cancelled:#ACA099; --danger:#F08A7E; --toastBg:#ECE6DA; --toastText:#1C1A17; --toastAction:#9A3A1C; }
+/* ===== Slate Harbor ===== */
+/* LIGHT MODE
+   --bg           #F1F4F7   (background)
+   --surface      #FFFFFF   (surface)
+   --text         #1E2833   (text)
+   --muted        #5B6775   (muted text)
+   --border       #DCE2E9   (border / divider)
+   --accent       #2F6690   (accent)
+   --onAccent     #FFFFFF   (on accent)
+   --overdue      #B4362F   (overdue)
+   --overdueTint  #FCECEA   (overdue tint)
+   --progress     #2F6690   (in progress)
+   --done         #5E6B78   (done)
+   --cancelled    #6E6A7A   (cancelled)
+   --danger       #A8281F   (danger)
+   --toastBg      #1E2833   (undo toast bg)
+   --toastText    #EEF2F6   (undo toast text)
+   --toastAction  #8CC4EE   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 13.53:1  AAA
+     text on surface                            14.93:1  AAA
+     muted on surface                            5.77:1  AA
+     on-accent on accent                         6.13:1  AA
+     accent on surface (focus ring / link)       6.13:1  AA non-text 3:1
+     overdue on overdue tint                     5.22:1  AA
+     overdue on surface                          5.98:1  AA
+     in-progress on surface                      6.13:1  AA
+     done on surface                             5.45:1  AA
+     cancelled on surface                        5.24:1  AA
+     danger on surface                           7.03:1  AAA
+     toast text on toast bg                     13.27:1  AAA
+     undo action on toast bg                     8.00:1  AAA
+     border on surface (decorative, not text)    1.30:1  decorative
+*/
+/* DARK MODE
+   --bg           #141A21   (background)
+   --surface      #1B232C   (surface)
+   --text         #E3E9EF   (text)
+   --muted        #9AA6B3   (muted text)
+   --border       #2C3743   (border / divider)
+   --accent       #7FB6DE   (accent)
+   --onAccent     #0F1A24   (on accent)
+   --overdue      #FF8F84   (overdue)
+   --overdueTint  #3A2225   (overdue tint)
+   --progress     #7FB6DE   (in progress)
+   --done         #97A3AF   (done)
+   --cancelled    #A9A3B8   (cancelled)
+   --danger       #FF8478   (danger)
+   --toastBg      #E3E9EF   (undo toast bg)
+   --toastText    #141A21   (undo toast text)
+   --toastAction  #1F5680   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 14.31:1  AAA
+     text on surface                            12.97:1  AAA
+     muted on surface                            6.41:1  AA
+     on-accent on accent                         8.08:1  AAA
+     accent on surface (focus ring / link)       7.29:1  AA non-text 3:1
+     overdue on overdue tint                     6.63:1  AA
+     overdue on surface                          7.19:1  AAA
+     in-progress on surface                      7.29:1  AAA
+     done on surface                             6.18:1  AA
+     cancelled on surface                        6.51:1  AA
+     danger on surface                           6.67:1  AA
+     toast text on toast bg                     14.31:1  AAA
+     undo action on toast bg                     6.36:1  AA
+     border on surface (decorative, not text)    1.31:1  decorative
+*/
+.slate.light { --bg:#F1F4F7; --surface:#FFFFFF; --text:#1E2833; --muted:#5B6775; --border:#DCE2E9; --accent:#2F6690; --onAccent:#FFFFFF; --overdue:#B4362F; --overdueTint:#FCECEA; --progress:#2F6690; --done:#5E6B78; --cancelled:#6E6A7A; --danger:#A8281F; --toastBg:#1E2833; --toastText:#EEF2F6; --toastAction:#8CC4EE; }
+.slate.dark { --bg:#141A21; --surface:#1B232C; --text:#E3E9EF; --muted:#9AA6B3; --border:#2C3743; --accent:#7FB6DE; --onAccent:#0F1A24; --overdue:#FF8F84; --overdueTint:#3A2225; --progress:#7FB6DE; --done:#97A3AF; --cancelled:#A9A3B8; --danger:#FF8478; --toastBg:#E3E9EF; --toastText:#141A21; --toastAction:#1F5680; }
+/* ===== Graphite Hush ===== */
+/* LIGHT MODE
+   --bg           #F4F4F3   (background)
+   --surface      #FFFFFF   (surface)
+   --text         #1F1F1F   (text)
+   --muted        #5F5F5F   (muted text)
+   --border       #E2E2E0   (border / divider)
+   --accent       #1F1F1F   (accent)
+   --onAccent     #FFFFFF   (on accent)
+   --overdue      #C2341A   (overdue)
+   --overdueTint  #FDEEEA   (overdue tint)
+   --progress     #3D3D3D   (in progress)
+   --done         #6A6A6A   (done)
+   --cancelled    #6A6A6A   (cancelled)
+   --danger       #1F1F1F   (danger)
+   --toastBg      #1F1F1F   (undo toast bg)
+   --toastText    #F4F4F3   (undo toast text)
+   --toastAction  #FF8A70   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 14.98:1  AAA
+     text on surface                            16.48:1  AAA
+     muted on surface                            6.39:1  AA
+     on-accent on accent                        16.48:1  AAA
+     accent on surface (focus ring / link)      16.48:1  AA non-text 3:1
+     overdue on overdue tint                     4.89:1  AA
+     overdue on surface                          5.53:1  AA
+     in-progress on surface                     10.86:1  AAA
+     done on surface                             5.41:1  AA
+     cancelled on surface                        5.41:1  AA
+     danger on surface                          16.48:1  AAA
+     toast text on toast bg                     14.98:1  AAA
+     undo action on toast bg                     7.16:1  AAA
+     border on surface (decorative, not text)    1.30:1  decorative
+*/
+/* DARK MODE
+   --bg           #161616   (background)
+   --surface      #1E1E1E   (surface)
+   --text         #EAEAEA   (text)
+   --muted        #A0A0A0   (muted text)
+   --border       #333333   (border / divider)
+   --accent       #EAEAEA   (accent)
+   --onAccent     #161616   (on accent)
+   --overdue      #FF7A5C   (overdue)
+   --overdueTint  #352019   (overdue tint)
+   --progress     #CFCFCF   (in progress)
+   --done         #9A9A9A   (done)
+   --cancelled    #9A9A9A   (cancelled)
+   --danger       #EAEAEA   (danger)
+   --toastBg      #EAEAEA   (undo toast bg)
+   --toastText    #161616   (undo toast text)
+   --toastAction  #B32E15   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 15.04:1  AAA
+     text on surface                            13.86:1  AAA
+     muted on surface                            6.38:1  AA
+     on-accent on accent                        15.04:1  AAA
+     accent on surface (focus ring / link)      13.86:1  AA non-text 3:1
+     overdue on overdue tint                     5.97:1  AA
+     overdue on surface                          6.50:1  AA
+     in-progress on surface                     10.70:1  AAA
+     done on surface                             5.92:1  AA
+     cancelled on surface                        5.92:1  AA
+     danger on surface                          13.86:1  AAA
+     toast text on toast bg                     15.04:1  AAA
+     undo action on toast bg                     5.26:1  AA
+     border on surface (decorative, not text)    1.32:1  decorative
+*/
+.hush.light { --bg:#F4F4F3; --surface:#FFFFFF; --text:#1F1F1F; --muted:#5F5F5F; --border:#E2E2E0; --accent:#1F1F1F; --onAccent:#FFFFFF; --overdue:#C2341A; --overdueTint:#FDEEEA; --progress:#3D3D3D; --done:#6A6A6A; --cancelled:#6A6A6A; --danger:#1F1F1F; --toastBg:#1F1F1F; --toastText:#F4F4F3; --toastAction:#FF8A70; }
+.hush.dark { --bg:#161616; --surface:#1E1E1E; --text:#EAEAEA; --muted:#A0A0A0; --border:#333333; --accent:#EAEAEA; --onAccent:#161616; --overdue:#FF7A5C; --overdueTint:#352019; --progress:#CFCFCF; --done:#9A9A9A; --cancelled:#9A9A9A; --danger:#EAEAEA; --toastBg:#EAEAEA; --toastText:#161616; --toastAction:#B32E15; }
+/* ===== Sage Morning ===== */
+/* LIGHT MODE
+   --bg           #F2F4EF   (background)
+   --surface      #FBFCF9   (surface)
+   --text         #252B24   (text)
+   --muted        #5E675B   (muted text)
+   --border       #DDE3D7   (border / divider)
+   --accent       #4A6B52   (accent)
+   --onAccent     #FFFFFF   (on accent)
+   --overdue      #A8442A   (overdue)
+   --overdueTint  #F8EAE3   (overdue tint)
+   --progress     #4A6B52   (in progress)
+   --done         #636B60   (done)
+   --cancelled    #73697A   (cancelled)
+   --danger       #9C3226   (danger)
+   --toastBg      #2A3329   (undo toast bg)
+   --toastText    #EEF2EA   (undo toast text)
+   --toastAction  #E8B48F   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 13.08:1  AAA
+     text on surface                            14.07:1  AAA
+     muted on surface                            5.72:1  AA
+     on-accent on accent                         5.97:1  AA
+     accent on surface (focus ring / link)       5.80:1  AA non-text 3:1
+     overdue on overdue tint                     5.07:1  AA
+     overdue on surface                          5.79:1  AA
+     in-progress on surface                      5.80:1  AA
+     done on surface                             5.36:1  AA
+     cancelled on surface                        5.06:1  AA
+     danger on surface                           7.04:1  AAA
+     toast text on toast bg                     11.55:1  AAA
+     undo action on toast bg                     7.08:1  AAA
+     border on surface (decorative, not text)    1.27:1  decorative
+*/
+/* DARK MODE
+   --bg           #171B17   (background)
+   --surface      #1F241F   (surface)
+   --text         #E4EAE1   (text)
+   --muted        #9DA897   (muted text)
+   --border       #323A31   (border / divider)
+   --accent       #9CC4A4   (accent)
+   --onAccent     #152016   (on accent)
+   --overdue      #EE9B7D   (overdue)
+   --overdueTint  #382720   (overdue tint)
+   --progress     #9CC4A4   (in progress)
+   --done         #9AA495   (done)
+   --cancelled    #ADA2B5   (cancelled)
+   --danger       #F08B7C   (danger)
+   --toastBg      #E4EAE1   (undo toast bg)
+   --toastText    #171B17   (undo toast text)
+   --toastAction  #94401F   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 14.23:1  AAA
+     text on surface                            12.89:1  AAA
+     muted on surface                            6.38:1  AA
+     on-accent on accent                         8.68:1  AAA
+     accent on surface (focus ring / link)       8.15:1  AA non-text 3:1
+     overdue on overdue tint                     6.50:1  AA
+     overdue on surface                          7.23:1  AAA
+     in-progress on surface                      8.15:1  AAA
+     done on surface                             6.10:1  AA
+     cancelled on surface                        6.47:1  AA
+     danger on surface                           6.53:1  AA
+     toast text on toast bg                     14.23:1  AAA
+     undo action on toast bg                     5.69:1  AA
+     border on surface (decorative, not text)    1.34:1  decorative
+*/
+.sage.light { --bg:#F2F4EF; --surface:#FBFCF9; --text:#252B24; --muted:#5E675B; --border:#DDE3D7; --accent:#4A6B52; --onAccent:#FFFFFF; --overdue:#A8442A; --overdueTint:#F8EAE3; --progress:#4A6B52; --done:#636B60; --cancelled:#73697A; --danger:#9C3226; --toastBg:#2A3329; --toastText:#EEF2EA; --toastAction:#E8B48F; }
+.sage.dark { --bg:#171B17; --surface:#1F241F; --text:#E4EAE1; --muted:#9DA897; --border:#323A31; --accent:#9CC4A4; --onAccent:#152016; --overdue:#EE9B7D; --overdueTint:#382720; --progress:#9CC4A4; --done:#9AA495; --cancelled:#ADA2B5; --danger:#F08B7C; --toastBg:#E4EAE1; --toastText:#171B17; --toastAction:#94401F; }
+/* ===== Broadsheet Ink ===== */
+/* LIGHT MODE
+   --bg           #FFFFFF   (background)
+   --surface      #FFFFFF   (surface)
+   --text         #0B0B0B   (text)
+   --muted        #4A4A4A   (muted text)
+   --border       #D0D0D0   (border / divider)
+   --accent       #0B0B0B   (accent)
+   --onAccent     #FFFFFF   (on accent)
+   --overdue      #B0001E   (overdue)
+   --overdueTint  #FFF1F2   (overdue tint)
+   --progress     #0B3D91   (in progress)
+   --done         #555555   (done)
+   --cancelled    #5A5048   (cancelled)
+   --danger       #B0001E   (danger)
+   --toastBg      #0B0B0B   (undo toast bg)
+   --toastText    #FFFFFF   (undo toast text)
+   --toastAction  #FFD24D   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 19.68:1  AAA
+     text on surface                            19.68:1  AAA
+     muted on surface                            8.86:1  AAA
+     on-accent on accent                        19.68:1  AAA
+     accent on surface (focus ring / link)      19.68:1  AA non-text 3:1
+     overdue on overdue tint                     6.67:1  AA
+     overdue on surface                          7.33:1  AAA
+     in-progress on surface                     10.04:1  AAA
+     done on surface                             7.46:1  AAA
+     cancelled on surface                        7.85:1  AAA
+     danger on surface                           7.33:1  AAA
+     toast text on toast bg                     19.68:1  AAA
+     undo action on toast bg                    13.66:1  AAA
+     border on surface (decorative, not text)    1.54:1  decorative
+*/
+/* DARK MODE
+   --bg           #0A0A0A   (background)
+   --surface      #0A0A0A   (surface)
+   --text         #F5F5F5   (text)
+   --muted        #B5B5B5   (muted text)
+   --border       #3A3A3A   (border / divider)
+   --accent       #F5F5F5   (accent)
+   --onAccent     #0A0A0A   (on accent)
+   --overdue      #FF6B7D   (overdue)
+   --overdueTint  #2A0C11   (overdue tint)
+   --progress     #8DB4FF   (in progress)
+   --done         #A8A8A8   (done)
+   --cancelled    #B8AEA5   (cancelled)
+   --danger       #FF6B7D   (danger)
+   --toastBg      #F5F5F5   (undo toast bg)
+   --toastText    #0A0A0A   (undo toast text)
+   --toastAction  #7A1A00   (undo action)
+   Contrast (WCAG 2.x):
+     text on bg                                 18.16:1  AAA
+     text on surface                            18.16:1  AAA
+     muted on surface                            9.66:1  AAA
+     on-accent on accent                        18.16:1  AAA
+     accent on surface (focus ring / link)      18.16:1  AA non-text 3:1
+     overdue on overdue tint                     6.60:1  AA
+     overdue on surface                          7.21:1  AAA
+     in-progress on surface                      9.53:1  AAA
+     done on surface                             8.33:1  AAA
+     cancelled on surface                        9.08:1  AAA
+     danger on surface                           7.21:1  AAA
+     toast text on toast bg                     18.16:1  AAA
+     undo action on toast bg                     9.75:1  AAA
+     border on surface (decorative, not text)    1.74:1  decorative
+*/
+.ink.light { --bg:#FFFFFF; --surface:#FFFFFF; --text:#0B0B0B; --muted:#4A4A4A; --border:#D0D0D0; --accent:#0B0B0B; --onAccent:#FFFFFF; --overdue:#B0001E; --overdueTint:#FFF1F2; --progress:#0B3D91; --done:#555555; --cancelled:#5A5048; --danger:#B0001E; --toastBg:#0B0B0B; --toastText:#FFFFFF; --toastAction:#FFD24D; }
+.ink.dark { --bg:#0A0A0A; --surface:#0A0A0A; --text:#F5F5F5; --muted:#B5B5B5; --border:#3A3A3A; --accent:#F5F5F5; --onAccent:#0A0A0A; --overdue:#FF6B7D; --overdueTint:#2A0C11; --progress:#8DB4FF; --done:#A8A8A8; --cancelled:#B8AEA5; --danger:#FF6B7D; --toastBg:#F5F5F5; --toastText:#0A0A0A; --toastAction:#7A1A00; }
+
+.panel { background:var(--bg); color:var(--text); border-radius:12px; padding:20px; position:relative; border:1px solid rgba(0,0,0,.08); }
+.mode-tag { position:absolute; top:10px; right:14px; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.app { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:18px 18px 16px; }
+.app-head { display:flex; justify-content:space-between; align-items:center; }
+.app-head h3 { margin:0; font-size:20px; font-weight:600; letter-spacing:-.01em; }
+.btn-primary { font:inherit; font-size:13px; font-weight:500; background:var(--accent); color:var(--onAccent); border:0; border-radius:7px; padding:7px 13px;
+  outline:2px solid var(--accent); outline-offset:2px; }
+.filters { margin:12px 0 10px; font-size:13px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap; }
+.filters .f.on { color:var(--text); font-weight:600; border-bottom:2px solid var(--accent); padding-bottom:2px; }
+.filters .sep { opacity:.6; }
+.rows { list-style:none; margin:0; padding:0; border-top:1px solid var(--border); }
+.row { display:flex; gap:12px; align-items:flex-start; padding:11px 10px 11px 12px; border-bottom:1px solid var(--border); border-left:3px solid transparent; }
+.row.overdue { background:var(--overdueTint); border-left-color:var(--overdue); }
+.ink .row.overdue { border-left-width:5px; }
+.st { width:18px; height:18px; flex:none; margin-top:1px; color:var(--muted); }
+.row.overdue .st { color:var(--overdue); }
+.st.prog { color:var(--progress); }
+.ico { width:18px; height:18px; display:block; }
+.ico.sm { width:12px; height:12px; display:inline-block; vertical-align:-1px; }
+.title { font-size:14.5px; font-weight:500; }
+.meta { font-size:12.5px; color:var(--muted); margin-top:2px; }
+.od-label { color:var(--overdue); font-weight:600; margin-right:6px; }
+.ink .od-label { text-transform:uppercase; letter-spacing:.06em; font-size:11.5px; }
+.pg-label { color:var(--progress); font-weight:500; margin-right:6px; }
+.finished { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); padding:12px 2px 6px; }
+.finished .ico { width:14px; height:14px; }
+.legend { display:flex; gap:16px; font-size:12.5px; padding:2px 2px 4px 22px; flex-wrap:wrap; }
+.legend .lg { display:inline-flex; align-items:center; gap:5px; }
+.legend .ico { width:13px; height:13px; }
+.lg.done { color:var(--done); }
+.lg.canc { color:var(--cancelled); font-style:italic; }
+.lg.dang { color:var(--danger); font-weight:500; margin-left:auto; text-decoration:underline; text-underline-offset:3px; }
+.toast { margin-top:14px; display:inline-flex; align-items:center; gap:8px; background:var(--toastBg); color:var(--toastText);
+  font-size:13px; padding:9px 12px 9px 14px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.18); }
+.toast .dot { opacity:.6; }
+.undo { font:inherit; font-weight:600; color:var(--toastAction); background:none; border:0; padding:0; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.chips { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:14px; }
+.chip { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text); min-width:0; }
+.chip .sw { width:20px; height:20px; border-radius:5px; flex:none; border:1px solid var(--border); }
+.chip .cl { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chip code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:10.5px; color:var(--muted); }
+.foot { max-width:1320px; margin:24px auto 48px; padding:0 32px; color:#666; font-size:12.5px; }
+</style></head>
+<body>
+<div class="page-head">
+  <h1>Colour themes - round 1</h1>
+  <p>Five calm, minimal registers for the todo app, each in Light and Dark. Only two things are allowed to draw the eye: the <b>overdue</b> highlight and the <b>5-second Undo</b>. Overdue always carries a triangle icon, an "Overdue" label and a left rule, so it never relies on colour alone. All text pairs meet WCAG AA (4.5:1) in both modes; exact ratios are in the &lt;style&gt; comments.</p>
+</div>
+
+<section class="variation">
+  <header class="vh">
+    <div class="num">01</div>
+    <div><h2>Paper &amp; Graphite</h2><p class="reg">Warm, unhurried, like a pencil list on good notebook paper. Soft cream, graphite text, a rust note for what's late.</p><p class="odn"><b>Overdue approach:</b> Rust/terracotta text + tinted row + left rule + triangle icon + 'Overdue' label</p></div>
+  </header>
+  <div class="pair">
+<div class="panel paper light">
+  <div class="mode-tag">Light</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#F6F2EA"></span><span class="cl">background</span><code>#F6F2EA</code></div><div class="chip"><span class="sw" style="background:#FFFDF8"></span><span class="cl">surface</span><code>#FFFDF8</code></div><div class="chip"><span class="sw" style="background:#2A2723"></span><span class="cl">text</span><code>#2A2723</code></div><div class="chip"><span class="sw" style="background:#6B645A"></span><span class="cl">muted text</span><code>#6B645A</code></div><div class="chip"><span class="sw" style="background:#E4DDD0"></span><span class="cl">border / divider</span><code>#E4DDD0</code></div><div class="chip"><span class="sw" style="background:#3F5A6B"></span><span class="cl">accent</span><code>#3F5A6B</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">on accent</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#A3401F"></span><span class="cl">overdue</span><code>#A3401F</code></div><div class="chip"><span class="sw" style="background:#FBEDE6"></span><span class="cl">overdue tint</span><code>#FBEDE6</code></div><div class="chip"><span class="sw" style="background:#3F5A6B"></span><span class="cl">in progress</span><code>#3F5A6B</code></div><div class="chip"><span class="sw" style="background:#6B6A5E"></span><span class="cl">done</span><code>#6B6A5E</code></div><div class="chip"><span class="sw" style="background:#7A6E68"></span><span class="cl">cancelled</span><code>#7A6E68</code></div><div class="chip"><span class="sw" style="background:#9E2F24"></span><span class="cl">danger</span><code>#9E2F24</code></div><div class="chip"><span class="sw" style="background:#2A2723"></span><span class="cl">undo toast bg</span><code>#2A2723</code></div><div class="chip"><span class="sw" style="background:#F6F2EA"></span><span class="cl">undo toast text</span><code>#F6F2EA</code></div><div class="chip"><span class="sw" style="background:#F2B48E"></span><span class="cl">undo action</span><code>#F2B48E</code></div></div>
+</div>
+<div class="panel paper dark">
+  <div class="mode-tag">Dark</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#1C1A17"></span><span class="cl">background</span><code>#1C1A17</code></div><div class="chip"><span class="sw" style="background:#24221E"></span><span class="cl">surface</span><code>#24221E</code></div><div class="chip"><span class="sw" style="background:#ECE6DA"></span><span class="cl">text</span><code>#ECE6DA</code></div><div class="chip"><span class="sw" style="background:#A79F92"></span><span class="cl">muted text</span><code>#A79F92</code></div><div class="chip"><span class="sw" style="background:#3A362F"></span><span class="cl">border / divider</span><code>#3A362F</code></div><div class="chip"><span class="sw" style="background:#9DBBCC"></span><span class="cl">accent</span><code>#9DBBCC</code></div><div class="chip"><span class="sw" style="background:#1C1A17"></span><span class="cl">on accent</span><code>#1C1A17</code></div><div class="chip"><span class="sw" style="background:#F09A74"></span><span class="cl">overdue</span><code>#F09A74</code></div><div class="chip"><span class="sw" style="background:#3A2620"></span><span class="cl">overdue tint</span><code>#3A2620</code></div><div class="chip"><span class="sw" style="background:#9DBBCC"></span><span class="cl">in progress</span><code>#9DBBCC</code></div><div class="chip"><span class="sw" style="background:#A3A293"></span><span class="cl">done</span><code>#A3A293</code></div><div class="chip"><span class="sw" style="background:#ACA099"></span><span class="cl">cancelled</span><code>#ACA099</code></div><div class="chip"><span class="sw" style="background:#F08A7E"></span><span class="cl">danger</span><code>#F08A7E</code></div><div class="chip"><span class="sw" style="background:#ECE6DA"></span><span class="cl">undo toast bg</span><code>#ECE6DA</code></div><div class="chip"><span class="sw" style="background:#1C1A17"></span><span class="cl">undo toast text</span><code>#1C1A17</code></div><div class="chip"><span class="sw" style="background:#9A3A1C"></span><span class="cl">undo action</span><code>#9A3A1C</code></div></div>
+</div></div>
+</section>
+<section class="variation">
+  <header class="vh">
+    <div class="num">02</div>
+    <div><h2>Slate Harbor</h2><p class="reg">Cool, composed, clear-headed. Blue-grey water at dawn; nothing shouts, the late item glows coral.</p><p class="odn"><b>Overdue approach:</b> Coral-red text + soft coral tint + left rule + triangle icon + 'Overdue' label</p></div>
+  </header>
+  <div class="pair">
+<div class="panel slate light">
+  <div class="mode-tag">Light</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#F1F4F7"></span><span class="cl">background</span><code>#F1F4F7</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">surface</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#1E2833"></span><span class="cl">text</span><code>#1E2833</code></div><div class="chip"><span class="sw" style="background:#5B6775"></span><span class="cl">muted text</span><code>#5B6775</code></div><div class="chip"><span class="sw" style="background:#DCE2E9"></span><span class="cl">border / divider</span><code>#DCE2E9</code></div><div class="chip"><span class="sw" style="background:#2F6690"></span><span class="cl">accent</span><code>#2F6690</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">on accent</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#B4362F"></span><span class="cl">overdue</span><code>#B4362F</code></div><div class="chip"><span class="sw" style="background:#FCECEA"></span><span class="cl">overdue tint</span><code>#FCECEA</code></div><div class="chip"><span class="sw" style="background:#2F6690"></span><span class="cl">in progress</span><code>#2F6690</code></div><div class="chip"><span class="sw" style="background:#5E6B78"></span><span class="cl">done</span><code>#5E6B78</code></div><div class="chip"><span class="sw" style="background:#6E6A7A"></span><span class="cl">cancelled</span><code>#6E6A7A</code></div><div class="chip"><span class="sw" style="background:#A8281F"></span><span class="cl">danger</span><code>#A8281F</code></div><div class="chip"><span class="sw" style="background:#1E2833"></span><span class="cl">undo toast bg</span><code>#1E2833</code></div><div class="chip"><span class="sw" style="background:#EEF2F6"></span><span class="cl">undo toast text</span><code>#EEF2F6</code></div><div class="chip"><span class="sw" style="background:#8CC4EE"></span><span class="cl">undo action</span><code>#8CC4EE</code></div></div>
+</div>
+<div class="panel slate dark">
+  <div class="mode-tag">Dark</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#141A21"></span><span class="cl">background</span><code>#141A21</code></div><div class="chip"><span class="sw" style="background:#1B232C"></span><span class="cl">surface</span><code>#1B232C</code></div><div class="chip"><span class="sw" style="background:#E3E9EF"></span><span class="cl">text</span><code>#E3E9EF</code></div><div class="chip"><span class="sw" style="background:#9AA6B3"></span><span class="cl">muted text</span><code>#9AA6B3</code></div><div class="chip"><span class="sw" style="background:#2C3743"></span><span class="cl">border / divider</span><code>#2C3743</code></div><div class="chip"><span class="sw" style="background:#7FB6DE"></span><span class="cl">accent</span><code>#7FB6DE</code></div><div class="chip"><span class="sw" style="background:#0F1A24"></span><span class="cl">on accent</span><code>#0F1A24</code></div><div class="chip"><span class="sw" style="background:#FF8F84"></span><span class="cl">overdue</span><code>#FF8F84</code></div><div class="chip"><span class="sw" style="background:#3A2225"></span><span class="cl">overdue tint</span><code>#3A2225</code></div><div class="chip"><span class="sw" style="background:#7FB6DE"></span><span class="cl">in progress</span><code>#7FB6DE</code></div><div class="chip"><span class="sw" style="background:#97A3AF"></span><span class="cl">done</span><code>#97A3AF</code></div><div class="chip"><span class="sw" style="background:#A9A3B8"></span><span class="cl">cancelled</span><code>#A9A3B8</code></div><div class="chip"><span class="sw" style="background:#FF8478"></span><span class="cl">danger</span><code>#FF8478</code></div><div class="chip"><span class="sw" style="background:#E3E9EF"></span><span class="cl">undo toast bg</span><code>#E3E9EF</code></div><div class="chip"><span class="sw" style="background:#141A21"></span><span class="cl">undo toast text</span><code>#141A21</code></div><div class="chip"><span class="sw" style="background:#1F5680"></span><span class="cl">undo action</span><code>#1F5680</code></div></div>
+</div></div>
+</section>
+<section class="variation">
+  <header class="vh">
+    <div class="num">03</div>
+    <div><h2>Graphite Hush</h2><p class="reg">Near-monochrome, gallery-quiet. Pure greys and ink; the ONLY colour in the app is a single vermilion reserved for overdue and Undo.</p><p class="odn"><b>Overdue approach:</b> Vermilion is the sole chromatic hue - overdue text/icon + label + left rule; accent stays ink</p></div>
+  </header>
+  <div class="pair">
+<div class="panel hush light">
+  <div class="mode-tag">Light</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#F4F4F3"></span><span class="cl">background</span><code>#F4F4F3</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">surface</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#1F1F1F"></span><span class="cl">text</span><code>#1F1F1F</code></div><div class="chip"><span class="sw" style="background:#5F5F5F"></span><span class="cl">muted text</span><code>#5F5F5F</code></div><div class="chip"><span class="sw" style="background:#E2E2E0"></span><span class="cl">border / divider</span><code>#E2E2E0</code></div><div class="chip"><span class="sw" style="background:#1F1F1F"></span><span class="cl">accent</span><code>#1F1F1F</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">on accent</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#C2341A"></span><span class="cl">overdue</span><code>#C2341A</code></div><div class="chip"><span class="sw" style="background:#FDEEEA"></span><span class="cl">overdue tint</span><code>#FDEEEA</code></div><div class="chip"><span class="sw" style="background:#3D3D3D"></span><span class="cl">in progress</span><code>#3D3D3D</code></div><div class="chip"><span class="sw" style="background:#6A6A6A"></span><span class="cl">done</span><code>#6A6A6A</code></div><div class="chip"><span class="sw" style="background:#6A6A6A"></span><span class="cl">cancelled</span><code>#6A6A6A</code></div><div class="chip"><span class="sw" style="background:#1F1F1F"></span><span class="cl">danger</span><code>#1F1F1F</code></div><div class="chip"><span class="sw" style="background:#1F1F1F"></span><span class="cl">undo toast bg</span><code>#1F1F1F</code></div><div class="chip"><span class="sw" style="background:#F4F4F3"></span><span class="cl">undo toast text</span><code>#F4F4F3</code></div><div class="chip"><span class="sw" style="background:#FF8A70"></span><span class="cl">undo action</span><code>#FF8A70</code></div></div>
+</div>
+<div class="panel hush dark">
+  <div class="mode-tag">Dark</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#161616"></span><span class="cl">background</span><code>#161616</code></div><div class="chip"><span class="sw" style="background:#1E1E1E"></span><span class="cl">surface</span><code>#1E1E1E</code></div><div class="chip"><span class="sw" style="background:#EAEAEA"></span><span class="cl">text</span><code>#EAEAEA</code></div><div class="chip"><span class="sw" style="background:#A0A0A0"></span><span class="cl">muted text</span><code>#A0A0A0</code></div><div class="chip"><span class="sw" style="background:#333333"></span><span class="cl">border / divider</span><code>#333333</code></div><div class="chip"><span class="sw" style="background:#EAEAEA"></span><span class="cl">accent</span><code>#EAEAEA</code></div><div class="chip"><span class="sw" style="background:#161616"></span><span class="cl">on accent</span><code>#161616</code></div><div class="chip"><span class="sw" style="background:#FF7A5C"></span><span class="cl">overdue</span><code>#FF7A5C</code></div><div class="chip"><span class="sw" style="background:#352019"></span><span class="cl">overdue tint</span><code>#352019</code></div><div class="chip"><span class="sw" style="background:#CFCFCF"></span><span class="cl">in progress</span><code>#CFCFCF</code></div><div class="chip"><span class="sw" style="background:#9A9A9A"></span><span class="cl">done</span><code>#9A9A9A</code></div><div class="chip"><span class="sw" style="background:#9A9A9A"></span><span class="cl">cancelled</span><code>#9A9A9A</code></div><div class="chip"><span class="sw" style="background:#EAEAEA"></span><span class="cl">danger</span><code>#EAEAEA</code></div><div class="chip"><span class="sw" style="background:#EAEAEA"></span><span class="cl">undo toast bg</span><code>#EAEAEA</code></div><div class="chip"><span class="sw" style="background:#161616"></span><span class="cl">undo toast text</span><code>#161616</code></div><div class="chip"><span class="sw" style="background:#B32E15"></span><span class="cl">undo action</span><code>#B32E15</code></div></div>
+</div></div>
+</section>
+<section class="variation">
+  <header class="vh">
+    <div class="num">04</div>
+    <div><h2>Sage Morning</h2><p class="reg">Soft, natural, breathing room. Linen and eucalyptus; restorative rather than productive. Late items turn clay.</p><p class="odn"><b>Overdue approach:</b> Clay/brick text + warm clay tint + left rule + triangle icon + 'Overdue' label (warm against cool-green field)</p></div>
+  </header>
+  <div class="pair">
+<div class="panel sage light">
+  <div class="mode-tag">Light</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#F2F4EF"></span><span class="cl">background</span><code>#F2F4EF</code></div><div class="chip"><span class="sw" style="background:#FBFCF9"></span><span class="cl">surface</span><code>#FBFCF9</code></div><div class="chip"><span class="sw" style="background:#252B24"></span><span class="cl">text</span><code>#252B24</code></div><div class="chip"><span class="sw" style="background:#5E675B"></span><span class="cl">muted text</span><code>#5E675B</code></div><div class="chip"><span class="sw" style="background:#DDE3D7"></span><span class="cl">border / divider</span><code>#DDE3D7</code></div><div class="chip"><span class="sw" style="background:#4A6B52"></span><span class="cl">accent</span><code>#4A6B52</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">on accent</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#A8442A"></span><span class="cl">overdue</span><code>#A8442A</code></div><div class="chip"><span class="sw" style="background:#F8EAE3"></span><span class="cl">overdue tint</span><code>#F8EAE3</code></div><div class="chip"><span class="sw" style="background:#4A6B52"></span><span class="cl">in progress</span><code>#4A6B52</code></div><div class="chip"><span class="sw" style="background:#636B60"></span><span class="cl">done</span><code>#636B60</code></div><div class="chip"><span class="sw" style="background:#73697A"></span><span class="cl">cancelled</span><code>#73697A</code></div><div class="chip"><span class="sw" style="background:#9C3226"></span><span class="cl">danger</span><code>#9C3226</code></div><div class="chip"><span class="sw" style="background:#2A3329"></span><span class="cl">undo toast bg</span><code>#2A3329</code></div><div class="chip"><span class="sw" style="background:#EEF2EA"></span><span class="cl">undo toast text</span><code>#EEF2EA</code></div><div class="chip"><span class="sw" style="background:#E8B48F"></span><span class="cl">undo action</span><code>#E8B48F</code></div></div>
+</div>
+<div class="panel sage dark">
+  <div class="mode-tag">Dark</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#171B17"></span><span class="cl">background</span><code>#171B17</code></div><div class="chip"><span class="sw" style="background:#1F241F"></span><span class="cl">surface</span><code>#1F241F</code></div><div class="chip"><span class="sw" style="background:#E4EAE1"></span><span class="cl">text</span><code>#E4EAE1</code></div><div class="chip"><span class="sw" style="background:#9DA897"></span><span class="cl">muted text</span><code>#9DA897</code></div><div class="chip"><span class="sw" style="background:#323A31"></span><span class="cl">border / divider</span><code>#323A31</code></div><div class="chip"><span class="sw" style="background:#9CC4A4"></span><span class="cl">accent</span><code>#9CC4A4</code></div><div class="chip"><span class="sw" style="background:#152016"></span><span class="cl">on accent</span><code>#152016</code></div><div class="chip"><span class="sw" style="background:#EE9B7D"></span><span class="cl">overdue</span><code>#EE9B7D</code></div><div class="chip"><span class="sw" style="background:#382720"></span><span class="cl">overdue tint</span><code>#382720</code></div><div class="chip"><span class="sw" style="background:#9CC4A4"></span><span class="cl">in progress</span><code>#9CC4A4</code></div><div class="chip"><span class="sw" style="background:#9AA495"></span><span class="cl">done</span><code>#9AA495</code></div><div class="chip"><span class="sw" style="background:#ADA2B5"></span><span class="cl">cancelled</span><code>#ADA2B5</code></div><div class="chip"><span class="sw" style="background:#F08B7C"></span><span class="cl">danger</span><code>#F08B7C</code></div><div class="chip"><span class="sw" style="background:#E4EAE1"></span><span class="cl">undo toast bg</span><code>#E4EAE1</code></div><div class="chip"><span class="sw" style="background:#171B17"></span><span class="cl">undo toast text</span><code>#171B17</code></div><div class="chip"><span class="sw" style="background:#94401F"></span><span class="cl">undo action</span><code>#94401F</code></div></div>
+</div></div>
+</section>
+<section class="variation">
+  <header class="vh">
+    <div class="num">05</div>
+    <div><h2>Broadsheet Ink</h2><p class="reg">Crisp, decisive, editorial. Black ink on white newsprint - minimal but confident, maximum legibility.</p><p class="odn"><b>Overdue approach:</b> Deep crimson + bold 'OVERDUE' tag + heavy left rule + triangle icon; tint kept very faint</p></div>
+  </header>
+  <div class="pair">
+<div class="panel ink light">
+  <div class="mode-tag">Light</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">background</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">surface</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#0B0B0B"></span><span class="cl">text</span><code>#0B0B0B</code></div><div class="chip"><span class="sw" style="background:#4A4A4A"></span><span class="cl">muted text</span><code>#4A4A4A</code></div><div class="chip"><span class="sw" style="background:#D0D0D0"></span><span class="cl">border / divider</span><code>#D0D0D0</code></div><div class="chip"><span class="sw" style="background:#0B0B0B"></span><span class="cl">accent</span><code>#0B0B0B</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">on accent</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#B0001E"></span><span class="cl">overdue</span><code>#B0001E</code></div><div class="chip"><span class="sw" style="background:#FFF1F2"></span><span class="cl">overdue tint</span><code>#FFF1F2</code></div><div class="chip"><span class="sw" style="background:#0B3D91"></span><span class="cl">in progress</span><code>#0B3D91</code></div><div class="chip"><span class="sw" style="background:#555555"></span><span class="cl">done</span><code>#555555</code></div><div class="chip"><span class="sw" style="background:#5A5048"></span><span class="cl">cancelled</span><code>#5A5048</code></div><div class="chip"><span class="sw" style="background:#B0001E"></span><span class="cl">danger</span><code>#B0001E</code></div><div class="chip"><span class="sw" style="background:#0B0B0B"></span><span class="cl">undo toast bg</span><code>#0B0B0B</code></div><div class="chip"><span class="sw" style="background:#FFFFFF"></span><span class="cl">undo toast text</span><code>#FFFFFF</code></div><div class="chip"><span class="sw" style="background:#FFD24D"></span><span class="cl">undo action</span><code>#FFD24D</code></div></div>
+</div>
+<div class="panel ink dark">
+  <div class="mode-tag">Dark</div>
+  <div class="app">
+    <div class="app-head">
+      <h3>Today</h3>
+      <button class="btn-primary">+ Add task</button>
+    </div>
+    <div class="filters" role="tablist">
+      <span class="f on">All</span><span class="sep">·</span><span class="f">To do</span><span class="sep">·</span><span class="f">In progress</span><span class="sep">·</span><span class="f">Done</span><span class="sep">·</span><span class="f">Cancelled</span>
+    </div>
+    <ul class="rows">
+      <li class="row overdue">
+        <span class="st"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <div class="body"><div class="title">Submit report</div><div class="meta"><span class="od-label"><svg class="ico sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Overdue</span> due yesterday 5:00 PM</div></div>
+      </li>
+      <li class="row">
+        <span class="st prog"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/></svg></span>
+        <div class="body"><div class="title">Call the dentist</div><div class="meta"><span class="pg-label">In progress</span> Fri 10:00 AM</div></div>
+      </li>
+      <li class="row">
+        <span class="st todo"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div class="body"><div class="title">Book flights to Lisbon</div><div class="meta">Oct 12, 9:00 AM</div></div>
+      </li>
+    </ul>
+    <div class="finished"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished (2)</div>
+    <div class="legend">
+      <span class="lg done"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Pay rent</span>
+      <span class="lg canc"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <s>Renew gym membership</s></span>
+      <span class="lg dang">Delete</span>
+    </div>
+    <div class="toast"><span>Marked 'Pay rent' done</span><span class="dot">·</span><button class="undo">Undo (4s)</button></div>
+  </div>
+  <div class="chips"><div class="chip"><span class="sw" style="background:#0A0A0A"></span><span class="cl">background</span><code>#0A0A0A</code></div><div class="chip"><span class="sw" style="background:#0A0A0A"></span><span class="cl">surface</span><code>#0A0A0A</code></div><div class="chip"><span class="sw" style="background:#F5F5F5"></span><span class="cl">text</span><code>#F5F5F5</code></div><div class="chip"><span class="sw" style="background:#B5B5B5"></span><span class="cl">muted text</span><code>#B5B5B5</code></div><div class="chip"><span class="sw" style="background:#3A3A3A"></span><span class="cl">border / divider</span><code>#3A3A3A</code></div><div class="chip"><span class="sw" style="background:#F5F5F5"></span><span class="cl">accent</span><code>#F5F5F5</code></div><div class="chip"><span class="sw" style="background:#0A0A0A"></span><span class="cl">on accent</span><code>#0A0A0A</code></div><div class="chip"><span class="sw" style="background:#FF6B7D"></span><span class="cl">overdue</span><code>#FF6B7D</code></div><div class="chip"><span class="sw" style="background:#2A0C11"></span><span class="cl">overdue tint</span><code>#2A0C11</code></div><div class="chip"><span class="sw" style="background:#8DB4FF"></span><span class="cl">in progress</span><code>#8DB4FF</code></div><div class="chip"><span class="sw" style="background:#A8A8A8"></span><span class="cl">done</span><code>#A8A8A8</code></div><div class="chip"><span class="sw" style="background:#B8AEA5"></span><span class="cl">cancelled</span><code>#B8AEA5</code></div><div class="chip"><span class="sw" style="background:#FF6B7D"></span><span class="cl">danger</span><code>#FF6B7D</code></div><div class="chip"><span class="sw" style="background:#F5F5F5"></span><span class="cl">undo toast bg</span><code>#F5F5F5</code></div><div class="chip"><span class="sw" style="background:#0A0A0A"></span><span class="cl">undo toast text</span><code>#0A0A0A</code></div><div class="chip"><span class="sw" style="background:#7A1A00"></span><span class="cl">undo action</span><code>#7A1A00</code></div></div>
+</div></div>
+</section>
+<p class="foot">Done vs cancelled: done = check icon, muted; cancelled = cross icon, strikethrough, italic, slightly different hue. Pick a register (or mix: e.g. "Graphite Hush structure with Paper warmth") for round 2.</p>
+</body></html>

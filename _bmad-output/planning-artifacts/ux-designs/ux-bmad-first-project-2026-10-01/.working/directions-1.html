@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Directions</title>
+<style>
+/* ==========================================================
+   Graphite Hush — fixed palette shared by all four directions
+   LIGHT: bg #F4F4F3 · surface #FFFFFF · text #1F1F1F · muted #5F5F5F
+          border #E2E2E0 · accent #1F1F1F · onAccent #FFFFFF
+          overdue #C2341A · overdueTint #FDEEEA · progress #3D3D3D
+          done/cancelled #6A6A6A · toastBg #1F1F1F · toastText #F4F4F3
+          toastAction #FF8A70
+   DARK:  bg #161616 · surface #1E1E1E · text #EAEAEA · muted #A0A0A0
+          border #333333 · accent #EAEAEA · onAccent #161616
+          overdue #FF7A5C · overdueTint #352019 · progress #CFCFCF
+          done/cancelled #9A9A9A · toastBg #EAEAEA · toastText #161616
+          toastAction #B32E15
+   Vermilion appears ONLY on overdue and Undo.
+   Directions vary radius / weight / scale / spacing only.
+   ========================================================== */
+:root{
+  --bg:#F4F4F3; --surface:#FFFFFF; --text:#1F1F1F; --muted:#5F5F5F; --border:#E2E2E0;
+  --accent:#1F1F1F; --onAccent:#FFFFFF; --overdue:#C2341A; --overdueTint:#FDEEEA;
+  --progress:#3D3D3D; --finished:#6A6A6A; --toastBg:#1F1F1F; --toastText:#F4F4F3; --toastAction:#FF8A70;
+  --hover:#F7F7F6; --sel:#F0F0EE;
+  --page:#EBEBEA;
+}
+.dark{
+  --bg:#161616; --surface:#1E1E1E; --text:#EAEAEA; --muted:#A0A0A0; --border:#333333;
+  --accent:#EAEAEA; --onAccent:#161616; --overdue:#FF7A5C; --overdueTint:#352019;
+  --progress:#CFCFCF; --finished:#9A9A9A; --toastBg:#EAEAEA; --toastText:#161616; --toastAction:#B32E15;
+  --hover:#242424; --sel:#262626;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--page);color:#1F1F1F;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.page-head{padding:28px 32px 8px}
+.page-head h1{margin:0 0 6px;font-size:22px;font-weight:600;letter-spacing:-.01em}
+.page-head p{margin:0;color:#5F5F5F;font-size:14px;max-width:900px;line-height:1.5}
+.compare{display:grid;grid-template-columns:repeat(4,640px);gap:28px;padding:20px 32px 48px;overflow-x:auto;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px}
+.col-head{background:#fff;border:1px solid #E2E2E0;border-radius:10px;padding:16px 18px;min-height:212px}
+.col-head .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#5F5F5F}
+.col-head h2{margin:4px 0 8px;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.col-head p{margin:0 0 10px;font-size:13.5px;line-height:1.5;color:#1F1F1F}
+.traits{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12px;color:#5F5F5F;margin:0}
+.traits dt{font-weight:600;color:#1F1F1F}
+.traits dd{margin:0}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#5F5F5F;margin:6px 2px -6px}
+
+/* ---------- browser frame ---------- */
+.frame{border:1px solid #D6D6D4;border-radius:10px;overflow:hidden;background:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
+.chrome{height:32px;background:#E7E7E5;border-bottom:1px solid #D6D6D4;display:flex;align-items:center;gap:6px;padding:0 12px}
+.chrome i{width:10px;height:10px;border-radius:50%;background:#CFCFCC;display:block}
+.chrome .url{margin-left:14px;flex:1;height:20px;border-radius:5px;background:#F4F4F3;font-size:11px;color:#5F5F5F;display:flex;align-items:center;padding:0 10px}
+.dark .chrome{background:#262626;border-color:#333}
+.dark .chrome i{background:#444}
+.dark .chrome .url{background:#1E1E1E;color:#A0A0A0}
+.viewport{position:relative;color:var(--text);background:var(--bg);overflow:hidden}
+
+/* ---------- shared primitives (shadcn-like) ---------- */
+.ico{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid transparent;background:transparent;color:var(--text);font:inherit;font-size:13px;font-weight:500;height:32px;padding:0 12px;border-radius:var(--r,6px);white-space:nowrap;cursor:default}
+.btn.primary{background:var(--accent);color:var(--onAccent)}
+.btn.outline{border-color:var(--border);background:var(--surface)}
+.btn.ghost:hover{background:var(--hover)}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.btn.xs{height:22px;padding:0 7px;font-size:11.5px}
+.btn.icon{width:30px;padding:0}
+.input{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:var(--r,6px);background:var(--surface);color:var(--muted);font-size:14px}
+.input.focus{border-color:var(--text);box-shadow:0 0 0 3px rgba(31,31,31,.08)}
+.dark .input.focus{box-shadow:0 0 0 3px rgba(234,234,234,.12)}
+.input .val{color:var(--text)}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:-6px}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:0 4px;color:var(--muted);background:var(--surface);line-height:16px}
+.muted{color:var(--muted)}
+.sr{position:absolute;left:-9999px}
+
+/* status marks */
+.mark{width:18px;height:18px;flex:none;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
+.mark svg{width:18px;height:18px}
+.mark.prog{color:var(--progress)}
+.mark.fin{color:var(--finished)}
+.mark.od{color:var(--overdue)}
+
+/* rows */
+.row{position:relative;display:flex;align-items:center;gap:12px;color:var(--text)}
+.row .title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .due{color:var(--muted);white-space:nowrap}
+.row.overdue{background:var(--overdueTint);box-shadow:inset 3px 0 0 var(--overdue)}
+.odlabel{display:inline-flex;align-items:center;gap:4px;color:var(--overdue);font-weight:600;white-space:nowrap}
+.odlabel .ico{width:14px;height:14px}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:999px;padding:0 8px;height:20px;font-size:11.5px;color:var(--muted);background:var(--surface);white-space:nowrap}
+.chip.prog{color:var(--progress);border-color:var(--progress)}
+.row.done .title,.row.cancelled .title{color:var(--finished)}
+.row.cancelled .title{text-decoration:line-through;text-decoration-thickness:1px}
+.row.done .due,.row.cancelled .due{color:var(--finished)}
+
+/* toast */
+.toast{position:absolute;display:flex;align-items:center;gap:14px;background:var(--toastBg);color:var(--toastText);font-size:13px;padding:10px 14px;border-radius:var(--r,8px);box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.toast .undo{color:var(--toastAction);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.toast .count{opacity:.7;font-variant-numeric:tabular-nums}
+
+/* disclosure */
+.disc{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;font-weight:500}
+.disc .ico{width:14px;height:14px}
+
+/* annotation callouts (outside UI meaning) */
+.note{position:absolute;font-size:10.5px;color:#5F5F5F;background:#FFFBE6;border:1px dashed #C9BE85;border-radius:4px;padding:2px 6px;white-space:nowrap;z-index:5}
+.dark .note{display:none}
+
+/* ======================================================
+   DIRECTION A — STILL WATER  (airy · light weight · inline top input · hover reveal)
+   radius 10 · title 32/300 · row 16/400 · row pad 18x24
+   ====================================================== */
+.dA{--r:10px}
+.dA .viewport{height:720px}
+.dA .wrap{max-width:560px;margin:0 auto;padding:48px 0 0}
+.dA .hd h3{margin:0;font-size:32px;font-weight:300;letter-spacing:-.02em}
+.dA .hd .date{font-size:14px;color:var(--muted);margin-top:4px}
+.dA .tabs{display:flex;gap:22px;margin:26px 0 18px;font-size:13.5px;color:var(--muted)}
+.dA .tabs span{padding-bottom:6px}
+.dA .tabs .on{color:var(--text);box-shadow:inset 0 -1.5px 0 var(--text)}
+.dA .add{height:48px;font-size:15px;padding:0 16px;border-radius:12px}
+.dA .add .right{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:12px}
+.dA .list{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.dA .row{padding:16px 22px;font-size:16px;font-weight:400;border-top:1px solid var(--border);min-height:58px}
+.dA .row:first-child{border-top:0}
+.dA .row .due{font-size:13px}
+.dA .row .acts{display:none;gap:2px}
+.dA .row.hover{background:var(--hover)}
+.dA .row.hover .acts{display:flex}
+.dA .row.hover .due{display:none}
+.dA .row.overdue .due{color:var(--overdue)}
+.dA .fin{margin-top:22px}
+.dA .fin .list{margin-top:10px}
+.dA .row.done,.dA .row.cancelled{min-height:50px;padding:13px 22px;font-size:15px}
+.dA .toast{left:50%;transform:translateX(-50%);bottom:24px;border-radius:12px;padding:12px 18px}
+.dA .empty{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:64px 24px;text-align:center}
+.dA .empty .ring{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--border);margin:0 auto 18px}
+.dA .empty h4{margin:0;font-size:18px;font-weight:300}
+.dA .empty p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+
+/* ======================================================
+   DIRECTION B — LEDGER  (compact · medium weight · dialog add · always-visible actions)
+   radius 4 · title 18/600 · row 13/450 · row h 38
+   ====================================================== */
+.dB{--r:4px}
+.dB .viewport{height:560px}
+.dB .wrap{padding:20px 16px 0}
+.dB .hd{display:flex;align-items:center;gap:12px}
+.dB .hd h3{margin:0;font-size:18px;font-weight:600;letter-spacing:-.01em}
+.dB .hd .date{font-size:12px;color:var(--muted)}
+.dB .hd .btn{margin-left:auto}
+.dB .seg{display:inline-flex;margin:14px 0 12px;border:1px solid var(--border);border-radius:5px;background:var(--surface);padding:2px;font-size:12px}
+.dB .seg span{padding:3px 10px;border-radius:3px;color:var(--muted)}
+.dB .seg span b{font-weight:500;margin-left:4px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dB .seg .on{background:var(--accent);color:var(--onAccent)}
+.dB .seg .on b{color:var(--onAccent);opacity:.75}
+.dB .tbl{background:var(--surface);border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.dB .th,.dB .row{display:grid;grid-template-columns:22px 1fr 112px 80px 186px;align-items:center;gap:0 6px;padding:0 10px}
+.dB .th{height:28px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);background:var(--bg)}
+.dB .row{height:40px;font-size:13px;border-top:1px solid var(--border)}
+.dB .th + .row{border-top:0}
+.dB .row .due{font-size:12px;font-variant-numeric:tabular-nums}
+.dB .row .acts{display:flex;gap:4px;justify-content:flex-end}
+.dB .row .odcell{display:flex;flex-direction:column;line-height:1.2}
+.dB .row .odcell .odlabel{font-size:11px}
+.dB .row .odcell .due{color:var(--overdue);font-size:11.5px}
+.dB .sub{display:flex;align-items:center;gap:6px;height:30px;padding:0 10px;font-size:11.5px;color:var(--muted);background:var(--bg);border-top:1px solid var(--border);font-weight:500}
+.dB .sub .ico{width:13px;height:13px}
+.dB .toast{right:16px;bottom:16px;font-size:12.5px;padding:8px 12px;border-radius:4px}
+.dB .scrim{position:absolute;inset:0;background:rgba(22,22,22,.32)}
+.dB .dialog{position:absolute;left:50%;top:84px;transform:translateX(-50%);width:400px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 16px 48px rgba(0,0,0,.18);padding:18px}
+.dB .dialog h4{margin:0;font-size:15px;font-weight:600}
+.dB .dialog .desc{margin:2px 0 14px;font-size:12px;color:var(--muted)}
+.dB .field{margin-bottom:12px}
+.dB .field label{display:block;font-size:12px;font-weight:500;margin-bottom:5px}
+.dB .field .input{height:32px;font-size:13px}
+.dB .pair{display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
+.dB .dialog .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+/* ======================================================
+   DIRECTION C — DESK LAMP  (balanced · bold headings · side-panel add · overflow menu)
+   radius 8 · title 26/700 · row 15/500 · row pad 13x16
+   ====================================================== */
+.dC{--r:8px}
+.dC .viewport{height:640px;display:grid;grid-template-columns:1fr 210px}
+.dC .main{padding:28px 18px 0 22px;position:relative}
+.dC .hd{display:flex;align-items:flex-end;gap:12px}
+.dC .hd h3{margin:0;font-size:26px;font-weight:700;letter-spacing:-.025em}
+.dC .hd .count{font-size:13px;color:var(--muted);padding-bottom:4px}
+.dC .select{margin-left:auto;display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px}
+.dC .select .muted{font-size:12px}
+.dC .select .ico{width:14px;height:14px;color:var(--muted)}
+.dC .list{margin-top:18px;display:flex;flex-direction:column;gap:6px}
+.dC .row{gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 8px 12px 14px;font-size:15px;font-weight:500}
+.dC .row .due{font-size:12px;font-weight:400}
+.dC .row.overdue{border-color:transparent}
+.dC .row.sel{border-color:var(--text)}
+.dC .row .more{color:var(--muted)}
+.dC .row .more.open{background:var(--sel);color:var(--text)}
+.dC .menu{position:absolute;right:-2px;top:44px;width:168px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:4px;z-index:4;font-weight:400}
+.dC .menu div{display:flex;align-items:center;gap:8px;height:30px;padding:0 8px;border-radius:5px;font-size:13px}
+.dC .menu .hl{background:var(--sel)}
+.dC .menu .ico{width:14px;height:14px;color:var(--muted)}
+.dC .menu hr{border:0;border-top:1px solid var(--border);margin:4px 0}
+.dC .menu .k{margin-left:auto;font-size:11px;color:var(--muted)}
+.dC .fin{margin-top:18px}
+.dC .fin .list{margin-top:8px}
+.dC .row.done,.dC .row.cancelled{background:transparent;font-weight:400;padding:9px 10px 9px 16px}
+.dC .panel{border-left:1px solid var(--border);background:var(--surface);padding:28px 18px;display:flex;flex-direction:column;gap:12px}
+.dC .panel h4{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.dC .panel .help{margin:-6px 0 4px;font-size:12px;color:var(--muted)}
+.dC .panel label{display:block;font-size:12px;font-weight:600;margin-bottom:5px}
+.dC .panel .input{height:34px;font-size:13px}
+.dC .panel .pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dC .panel .btn{width:100%}
+.dC .panel .tip{margin-top:auto;font-size:11.5px;color:var(--muted);line-height:1.5}
+.dC .toast{left:22px;bottom:20px}
+
+/* ======================================================
+   DIRECTION D — INDEX CARD  (soft cards · keyboard-first · bottom composer · reveal on select)
+   radius 14 · title 22/500 · row 15/400 · card gap 8
+   ====================================================== */
+.dD{--r:12px}
+.dD .viewport{height:720px}
+.dD .wrap{max-width:540px;margin:0 auto;padding:34px 0 0}
+.dD .hd{display:flex;align-items:baseline;gap:10px}
+.dD .hd h3{margin:0;font-size:22px;font-weight:500;letter-spacing:-.015em}
+.dD .hd .date{font-size:13px;color:var(--muted)}
+.dD .pills{display:flex;gap:6px;margin:16px 0 16px}
+.dD .pills span{height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;font-size:12.5px;color:var(--muted);border:1px solid var(--border);background:var(--surface)}
+.dD .pills .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
+.dD .list{display:flex;flex-direction:column;gap:8px}
+.dD .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.dD .card .row{padding:14px 16px;font-size:15px}
+.dD .card.overdue{border-color:transparent}
+.dD .card.overdue .row{background:var(--overdueTint);box-shadow:inset 3px 0 0 var(--overdue)}
+.dD .card .row .due{font-size:12.5px}
+.dD .card.sel{border-color:var(--text);box-shadow:0 0 0 3px rgba(31,31,31,.06)}
+.dD .actbar{display:flex;gap:6px;align-items:center;padding:0 16px 12px 46px}
+.dD .actbar .btn{border-radius:999px}
+.dD .actbar .kbd{margin-left:2px}
+.dD .fin{margin-top:18px}
+.dD .fin .list{margin-top:8px}
+.dD .card.ghost{background:transparent;border-style:dashed}
+.dD .card.ghost .row{padding:10px 16px;font-size:14px}
+.dD .composer{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;width:540px;height:50px;border-radius:999px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,.08);display:flex;align-items:center;gap:10px;padding:0 8px 0 18px;font-size:14.5px;color:var(--muted)}
+.dD .composer .r{margin-left:auto;display:flex;gap:6px;align-items:center}
+.dD .composer .btn{border-radius:999px}
+.dD .toast{left:50%;transform:translateX(-50%);bottom:84px;border-radius:999px;padding:9px 16px}
+.dD .edit{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.dD .edit .input{height:38px;border-radius:10px;font-size:15px}
+.dD .edit .line{display:flex;gap:6px;align-items:center}
+.dD .edit .line .btn{border-radius:999px}
+
+/* ---------- dark thumbnails ---------- */
+.thumbwrap{display:flex;gap:12px;align-items:flex-start}
+.thumb{width:330px;flex:none}
+.thumb .viewport{height:auto}
+.thumbnote{font-size:12px;color:#5F5F5F;line-height:1.5;padding-top:6px}
+.mini{padding:16px 18px 54px;position:relative;font-size:12px}
+.mini h5{margin:0 0 10px;font-size:15px;color:var(--text)}
+.mini .row{font-size:12px;gap:8px}
+.mini .mark,.mini .mark svg{width:14px;height:14px}
+.mini .toast{font-size:11px;padding:6px 10px;bottom:12px;gap:10px}
+.mini .odlabel{font-size:11px}
+</style>
+</head>
+<body>
+
+<!-- icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-todo" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-prog" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.75a7.25 7.25 0 0 1 0 14.5z" fill="currentColor"/></symbol>
+    <symbol id="i-done" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.6 10.2l2.3 2.3 4.5-4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cancel" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.2 2.2"/><path d="M7 10h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5v5.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.25" fill="currentColor"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-chevr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="19" cy="12" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M10 6l-6 6 6 6M4 12h16"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  </defs>
+</svg>
+
+<header class="page-head">
+  <h1>Design directions: Today view</h1>
+  <p>Four ways to build the same screen in Graphite Hush. Colour, content and overdue rules stay the same in all four. What changes is density, type, how row actions show up, where you add a task, and how things move. Scroll sideways to compare. Each column has the main mock, one state variant and a small dark-mode thumbnail.</p>
+</header>
+
+<main class="compare">
+
+<!-- =====================================================================
+     DIRECTION A — STILL WATER
+     ===================================================================== -->
+<section class="col dA">
+  <div class="col-head">
+    <div class="tag">Direction A</div>
+    <h2>Still Water</h2>
+    <p>Lots of white space, light type, and nothing on screen you don't need yet. The add field sits at the top, ready to type into, and row actions show up only when you hover or focus a row. It is the quietest of the four. Good if the list is usually short.</p>
+    <dl class="traits">
+      <dt>Density</dt><dd>Airy. 58px rows, one narrow column (560px)</dd>
+      <dt>Type</dt><dd>32/300 heading, 16/400 rows</dd>
+      <dt>Add task</dt><dd>Inline input at top. Enter adds it</dd>
+      <dt>Actions</dt><dd>Show on hover / focus, replacing the due date</dd>
+      <dt>Motion</dt><dd>Opacity fades only, 180ms. Nothing slides</dd>
+    </dl>
+  </div>
+
+  <div class="label">Main mock: light</div>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+    <div class="viewport">
+      <div class="wrap">
+        <div class="hd"><h3>Today</h3><div class="date">Thursday, October 1</div></div>
+        <div class="tabs"><span class="on">All</span><span>To do</span><span>In progress</span><span>Done</span><span>Cancelled</span></div>
+        <div class="input add focus"><svg class="ico"><use href="#i-plus"/></svg><span class="val">Water the plants</span><span class="caret"></span>
+          <span class="right"><span class="chip"><svg class="ico" style="width:12px;height:12px"><use href="#i-cal"/></svg>Add due date</span><span class="kbd">Enter</span></span></div>
+
+        <div class="list">
+          <div class="row overdue">
+            <span class="mark od"><svg><use href="#i-todo"/></svg></span>
+            <span class="title">Submit report</span>
+            <span class="odlabel"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span>
+            <span class="due">Yesterday, 5:00 PM</span>
+          </div>
+          <div class="row hover">
+            <span class="mark prog"><svg><use href="#i-prog"/></svg></span>
+            <span class="title">Call the dentist</span>
+            <span class="due">Fri, 10:00 AM</span>
+            <span class="acts"><span class="btn ghost sm">Move back</span><span class="btn ghost sm">Complete</span><span class="btn ghost sm">Cancel</span></span>
+            <span class="note" style="right:8px;top:-11px">hover: actions fade in, due date fades out</span>
+          </div>
+          <div class="row">
+            <span class="mark"><svg><use href="#i-todo"/></svg></span>
+            <span class="title">Book flights to Lisbon</span>
+            <span class="due">Oct 12, 9:00 AM</span>
+          </div>
+        </div>
+
+        <div class="fin">
+          <div class="disc"><svg class="ico"><use href="#i-chev"/></svg>Finished (2)</div>
+          <div class="list">
+            <div class="row done"><span class="mark fin"><svg><use href="#i-done"/></svg></span><span class="title">Pay rent</span><span class="due">Done</span></div>
+            <div class="row cancelled"><span class="mark fin"><svg><use href="#i-cancel"/></svg></span><span class="title">Renew passport</span><span class="due">Cancelled</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="toast">Marked “Pay rent” done <span class="undo">Undo</span><span class="count">4s</span></div>
+    </div>
+  </div>
+  <div class="label" style="margin-top:4px">To do row on hover shows: Start · Complete · Cancel · Delete</div>
+
+  <div class="label">State variant: empty</div>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+    <div class="viewport" style="height:440px">
+      <div class="wrap">
+        <div class="hd"><h3>Today</h3><div class="date">Thursday, October 1</div></div>
+        <div class="tabs"><span class="on">All</span><span>To do</span><span>In progress</span><span>Done</span><span>Cancelled</span></div>
+        <div class="input add"><svg class="ico"><use href="#i-plus"/></svg>Add a task</div>
+        <div class="empty"><div class="ring"></div><h4>Nothing due. Enjoy the quiet.</h4><p>Type above when something comes up.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="label">Dark mode</div>
+  <div class="thumbwrap">
+    <div class="frame dark thumb">
+      <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+      <div class="viewport mini">
+        <h5 style="font-weight:300;font-size:18px">Today</h5>
+        <div class="input" style="height:30px;font-size:12px;border-radius:9px;margin-bottom:10px"><svg class="ico" style="width:13px;height:13px"><use href="#i-plus"/></svg>Add a task</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;overflow:hidden">
+          <div class="row overdue" style="padding:10px 12px"><span class="mark od"><svg><use href="#i-todo"/></svg></span><span class="title">Submit report</span><span class="odlabel"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span></div>
+          <div class="row" style="padding:10px 12px;border-top:1px solid var(--border)"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title">Call the dentist</span><span class="due">Fri, 10:00 AM</span></div>
+          <div class="row done" style="padding:10px 12px;border-top:1px solid var(--border)"><span class="mark fin"><svg><use href="#i-done"/></svg></span><span class="title">Pay rent</span></div>
+        </div>
+        <div class="toast" style="left:50%;transform:translateX(-50%);border-radius:9px">Marked “Pay rent” done <span class="undo">Undo</span></div>
+      </div>
+    </div>
+    <div class="thumbnote">Same layout. In dark mode the toast flips to light, and Undo uses the darker vermilion #B32E15.</div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     DIRECTION B — LEDGER
+     ===================================================================== -->
+<section class="col dB">
+  <div class="col-head">
+    <div class="tag">Direction B</div>
+    <h2>Ledger</h2>
+    <p>A tight, table-like list that fits a lot on one screen. Every action is always visible as a small button, so nothing is hidden. A “New task” button opens a short dialog. This one is plain and quick to use, and it scales best as the list grows.</p>
+    <dl class="traits">
+      <dt>Density</dt><dd>Compact. 40px rows, full-width table with columns</dd>
+      <dt>Type</dt><dd>18/600 heading, 13/400 rows, tabular dates</dd>
+      <dt>Add task</dt><dd>“New task” button (N) opens a dialog</dd>
+      <dt>Actions</dt><dd>Always visible, xs outline buttons</dd>
+      <dt>Motion</dt><dd>Close to instant (100ms). Dialog fades, no movement</dd>
+    </dl>
+  </div>
+
+  <div class="label">Main mock: light</div>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+    <div class="viewport">
+      <div class="wrap">
+        <div class="hd"><h3>Today</h3><span class="date">Thu, Oct 1</span><span class="btn primary sm"><svg class="ico" style="width:14px;height:14px"><use href="#i-plus"/></svg>New task <span class="kbd" style="background:transparent;color:var(--onAccent);border-color:rgba(255,255,255,.35)">N</span></span></div>
+        <div class="seg"><span class="on">All<b>5</b></span><span>To do<b>2</b></span><span>In progress<b>1</b></span><span>Done<b>1</b></span><span>Cancelled<b>1</b></span></div>
+        <div class="tbl">
+          <div class="th"><span></span><span>Task</span><span>Due</span><span>Status</span><span style="text-align:right">Actions</span></div>
+          <div class="row overdue">
+            <span class="mark od"><svg><use href="#i-todo"/></svg></span>
+            <span class="title" style="font-weight:500">Submit report</span>
+            <span class="odcell"><span class="odlabel"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span><span class="due">Yesterday, 5:00 PM</span></span>
+            <span><span class="chip">To do</span></span>
+            <span class="acts"><span class="btn outline xs">Start</span><span class="btn outline xs">Complete</span><span class="btn outline xs">Cancel</span><span class="btn ghost xs icon" style="width:22px" title="Delete"><svg class="ico" style="width:13px;height:13px"><use href="#i-trash"/></svg></span></span>
+          </div>
+          <div class="row">
+            <span class="mark prog"><svg><use href="#i-prog"/></svg></span>
+            <span class="title">Call the dentist</span>
+            <span class="due">Fri, 10:00 AM</span>
+            <span><span class="chip prog">In progress</span></span>
+            <span class="acts"><span class="btn outline xs">Move back</span><span class="btn outline xs">Complete</span><span class="btn outline xs">Cancel</span></span>
+          </div>
+          <div class="row">
+            <span class="mark"><svg><use href="#i-todo"/></svg></span>
+            <span class="title">Book flights to Lisbon</span>
+            <span class="due">Oct 12, 9:00 AM</span>
+            <span><span class="chip">To do</span></span>
+            <span class="acts"><span class="btn outline xs">Start</span><span class="btn outline xs">Complete</span><span class="btn outline xs">Cancel</span><span class="btn ghost xs icon" style="width:22px" title="Delete"><svg class="ico" style="width:13px;height:13px"><use href="#i-trash"/></svg></span></span>
+          </div>
+          <div class="sub"><svg class="ico"><use href="#i-chev"/></svg>Finished (2)</div>
+          <div class="row done" style="border-top:0">
+            <span class="mark fin"><svg><use href="#i-done"/></svg></span>
+            <span class="title">Pay rent</span>
+            <span class="due">Oct 1, 9:12 AM</span>
+            <span><span class="chip">Done</span></span>
+            <span class="acts"></span>
+          </div>
+          <div class="row cancelled">
+            <span class="mark fin"><svg><use href="#i-cancel"/></svg></span>
+            <span class="title">Renew passport</span>
+            <span class="due">Sep 28</span>
+            <span><span class="chip">Cancelled</span></span>
+            <span class="acts"></span>
+          </div>
+        </div>
+      </div>
+      <div class="toast">Marked “Pay rent” done <span class="undo">Undo</span><span class="count">4s</span></div>
+    </div>
+  </div>
+
+  <div class="label">State variant: New task dialog</div>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+    <div class="viewport" style="height:440px">
+      <div class="wrap" style="opacity:.9">
+        <div class="hd"><h3>Today</h3><span class="date">Thu, Oct 1</span><span class="btn primary sm">New task</span></div>
+        <div class="seg"><span class="on">All<b>5</b></span><span>To do<b>2</b></span><span>In progress<b>1</b></span><span>Done<b>1</b></span><span>Cancelled<b>1</b></span></div>
+        <div class="tbl">
+          <div class="th"><span></span><span>Task</span><span>Due</span><span>Status</span><span></span></div>
+          <div class="row overdue"><span class="mark od"><svg><use href="#i-todo"/></svg></span><span class="title">Submit report</span><span class="odlabel" style="font-size:11px"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span><span></span><span></span></div>
+          <div class="row"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title">Call the dentist</span><span class="due">Fri, 10:00 AM</span><span></span><span></span></div>
+          <div class="row"><span class="mark"><svg><use href="#i-todo"/></svg></span><span class="title">Book flights to Lisbon</span><span class="due">Oct 12, 9:00 AM</span><span></span><span></span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="dialog">
+        <h4>New task</h4>
+        <div class="desc">The due date is optional.</div>
+        <div class="field"><label>Title</label><div class="input focus"><span class="val">Water the plants</span><span class="caret"></span></div></div>
+        <div class="field"><label>Due</label>
+          <div class="pair">
+            <div class="input"><svg class="ico" style="width:14px;height:14px"><use href="#i-cal"/></svg><span class="val">Sat, Oct 3</span></div>
+            <div class="input"><svg class="ico" style="width:14px;height:14px"><use href="#i-clock"/></svg><span class="val">6:00 PM</span><svg class="ico" style="width:13px;height:13px;margin-left:auto"><use href="#i-chev"/></svg></div>
+          </div>
+        </div>
+        <div class="foot"><span class="btn outline sm">Cancel</span><span class="btn primary sm">Add task</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="label">Dark mode</div>
+  <div class="thumbwrap">
+    <div class="frame dark thumb">
+      <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+      <div class="viewport mini">
+        <div style="display:flex;align-items:center;margin-bottom:10px"><h5 style="margin:0;font-weight:600">Today</h5><span class="btn primary xs" style="margin-left:auto;border-radius:4px">New task</span></div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px">
+          <div class="row overdue" style="padding:0 8px;height:30px"><span class="mark od"><svg><use href="#i-todo"/></svg></span><span class="title">Submit report</span><span class="odlabel"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span><span class="btn outline xs" style="border-radius:3px">Start</span></div>
+          <div class="row" style="padding:0 8px;height:30px;border-top:1px solid var(--border)"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title">Call the dentist</span><span class="btn outline xs" style="border-radius:3px">Complete</span></div>
+          <div class="row cancelled" style="padding:0 8px;height:30px;border-top:1px solid var(--border)"><span class="mark fin"><svg><use href="#i-cancel"/></svg></span><span class="title">Renew passport</span></div>
+        </div>
+        <div class="toast" style="right:12px;border-radius:4px">Marked “Pay rent” done <span class="undo">Undo</span></div>
+      </div>
+    </div>
+    <div class="thumbnote">Outline buttons switch to the dark surface. The row borders do most of the work in dark mode.</div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     DIRECTION C — DESK LAMP
+     ===================================================================== -->
+<section class="col dC">
+  <div class="col-head">
+    <div class="tag">Direction C</div>
+    <h2>Desk Lamp</h2>
+    <p>A bold heading over a list of separate rows, with a side panel that is always open for adding and editing. Row actions sit behind a “⋯” menu, so the list stays tidy and you're never more than one click from them. It feels the most like a work tool. Good if you edit tasks often.</p>
+    <dl class="traits">
+      <dt>Density</dt><dd>Medium. 48px card rows, list plus a 210px panel</dd>
+      <dt>Type</dt><dd>26/700 tight heading, 15/500 rows</dd>
+      <dt>Add task</dt><dd>Side panel, always open. It also hosts Edit</dd>
+      <dt>Actions</dt><dd>Overflow “⋯” menu per row (Radix dropdown)</dd>
+      <dt>Motion</dt><dd>Menu scales in from 96%, 120ms. Panel cross-fades between Add and Edit</dd>
+    </dl>
+  </div>
+
+  <div class="label">Main mock: light</div>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+    <div class="viewport">
+      <div class="main">
+        <div class="hd"><h3>Today</h3><span class="count">3 active</span>
+          <span class="select"><span class="muted">Show</span>All<svg class="ico"><use href="#i-chev"/></svg></span></div>
+        <div class="list">
+          <div class="row overdue" style="position:relative">
+            <span class="mark od"><svg><use href="#i-todo"/></svg></span>
+            <span class="title">Submit report</span>
+            <span class="odlabel" style="font-size:12.5px"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span>
+            <span class="due" style="color:var(--overdue)">Yesterday, 5:00 PM</span>
+            <span class="btn ghost icon sm more open" style="width:28px"><svg class="ico"><use href="#i-more"/></svg></span>
+            <div class="menu">
+              <div class="hl"><svg class="ico"><use href="#i-play"/></svg>Start</div>
+              <div><svg class="ico"><use href="#i-check"/></svg>Complete</div>
+              <div><svg class="ico"><use href="#i-x"/></svg>Cancel</div>
+              <div><svg class="ico"><use href="#i-pen"/></svg>Edit<span class="k">E</span></div>
+              <hr>
+              <div><svg class="ico"><use href="#i-trash"/></svg>Delete</div>
+            </div>
+          </div>
+          <div class="row">
+            <span class="mark prog"><svg><use href="#i-prog"/></svg></span>
+            <span class="title">Call the dentist</span>
+            <span class="due">Fri, 10:00 AM</span>
+            <span class="btn ghost icon sm more" style="width:28px"><svg class="ico"><use href="#i-more"/></svg></span>
+          </div>
+          <div class="row">
+            <span class="mark"><svg><use href="#i-todo"/></svg></span>
+            <span class="title">Book flights to Lisbon</span>
+            <span class="due">Oct 12, 9:00 AM</span>
+            <span class="btn ghost icon sm more" style="width:28px"><svg class="ico"><use href="#i-more"/></svg></span>
+          </div>
+        </div>
+        <div class="fin">
+          <div class="disc"><svg class="ico"><use href="#i-chev"/></svg>Finished (2)</div>
+          <div class="list">
+            <div class="row done"><span class="mark fin"><svg><use href="#i-done"/></svg></span><span class="title">Pay rent</span><span class="due">Done</span></div>
+            <div class="row cancelled"><span class="mark fin"><svg><use href="#i-cancel"/></svg></span><span class="title">Renew passport</span><span class="due">Cancelled</span></div>
+          </div>
+        </div>
+        <div class="toast">Marked “Pay rent” done <span class="undo">Undo</span><span class="count">4s</span></div>
+      </div>
+      <aside class="panel">
+        <h4>Add a task</h4>
+        <p class="help">The due date is optional.</p>
+        <div><label>Title</label><div class="input">What needs doing?</div></div>
+        <div><label>Due</label><div class="pair"><div class="input"><svg class="ico" style="width:13px;height:13px"><use href="#i-cal"/></svg>Date</div><div class="input"><svg class="ico" style="width:13px;height:13px"><use href="#i-clock"/></svg>Time</div></div></div>
+        <span class="btn primary">Add task</span>
+        <div class="tip">Press <span class="kbd">/</span> to jump here.<br>Choose Edit on a row to change it here.</div>
+      </aside>
+    </div>
+  </div>
+  <div class="label" style="margin-top:4px">In progress “⋯” menu: Move back · Complete · Cancel · Edit</div>
+
+  <div class="label">State variant: editing a row in the panel</div>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+    <div class="viewport" style="height:440px">
+      <div class="main">
+        <div class="hd"><h3>Today</h3><span class="count">3 active</span>
+          <span class="select"><span class="muted">Show</span>All<svg class="ico"><use href="#i-chev"/></svg></span></div>
+        <div class="list">
+          <div class="row overdue"><span class="mark od"><svg><use href="#i-todo"/></svg></span><span class="title">Submit report</span><span class="odlabel" style="font-size:12.5px"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span><span class="btn ghost icon sm more" style="width:28px"><svg class="ico"><use href="#i-more"/></svg></span></div>
+          <div class="row sel"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title">Call the dentist</span><span class="due">Editing</span><span class="btn ghost icon sm more" style="width:28px"><svg class="ico"><use href="#i-more"/></svg></span></div>
+          <div class="row"><span class="mark"><svg><use href="#i-todo"/></svg></span><span class="title">Book flights to Lisbon</span><span class="due">Oct 12, 9:00 AM</span><span class="btn ghost icon sm more" style="width:28px"><svg class="ico"><use href="#i-more"/></svg></span></div>
+        </div>
+      </div>
+      <aside class="panel">
+        <h4>Edit task</h4>
+        <p class="help">Changes save when you press Save.</p>
+        <div><label>Title</label><div class="input focus"><span class="val">Call the dentist</span><span class="caret" style="margin-left:-4px"></span></div></div>
+        <div><label>Due</label><div class="pair"><div class="input"><span class="val">Fri, Oct 2</span></div><div class="input"><span class="val">10:00 AM</span></div></div></div>
+        <div style="display:flex;gap:6px"><span class="btn outline" style="flex:1">Discard</span><span class="btn primary" style="flex:1">Save</span></div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="label">Dark mode</div>
+  <div class="thumbwrap">
+    <div class="frame dark thumb">
+      <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+      <div class="viewport" style="display:grid;grid-template-columns:1fr 92px;font-size:12px">
+        <div class="mini" style="padding-right:10px">
+          <h5 style="font-weight:700;letter-spacing:-.02em">Today</h5>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div class="row overdue" style="padding:8px 8px 8px 10px;border-radius:7px"><span class="mark od"><svg><use href="#i-todo"/></svg></span><span class="title" style="font-weight:500">Submit report</span><span class="odlabel"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span></div>
+            <div class="row" style="padding:8px 8px 8px 10px;border-radius:7px;background:var(--surface);border:1px solid var(--border)"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title" style="font-weight:500">Call the dentist</span><svg class="ico" style="color:var(--muted)"><use href="#i-more"/></svg></div>
+          </div>
+          <div class="toast" style="left:18px">Marked “Pay rent” done <span class="undo">Undo</span></div>
+        </div>
+        <div style="border-left:1px solid var(--border);background:var(--surface);padding:16px 8px;display:flex;flex-direction:column;gap:6px">
+          <b style="font-size:11px;color:var(--text)">Add a task</b>
+          <div class="input" style="height:22px;font-size:10px;padding:0 6px;border-radius:5px">Title</div>
+          <span class="btn primary xs" style="border-radius:5px">Add</span>
+        </div>
+      </div>
+    </div>
+    <div class="thumbnote">The panel uses the surface colour #1E1E1E against the #161616 page, so it reads as a separate area without a shadow.</div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     DIRECTION D — INDEX CARD
+     ===================================================================== -->
+<section class="col dD">
+  <div class="col-head">
+    <div class="tag">Direction D</div>
+    <h2>Index Card</h2>
+    <p>Soft rounded cards and a composer fixed to the bottom of the window, like a message box. Actions show up only on the card you select, with a key shown for each, so you can work through the list with the keyboard. It is friendly, and the motion is a little more noticeable than in the others.</p>
+    <dl class="traits">
+      <dt>Density</dt><dd>Medium-airy. Separate 14px-radius cards with 8px gaps</dd>
+      <dt>Type</dt><dd>22/500 heading, 15/400 rows, pill controls</dd>
+      <dt>Add task</dt><dd>Composer bar fixed to the bottom (⌘K focuses it)</dd>
+      <dt>Actions</dt><dd>Selected card expands into an action bar with keys</dd>
+      <dt>Motion</dt><dd>Card grows to height, 180ms ease-out. Finished rows slide into “Finished”</dd>
+    </dl>
+  </div>
+
+  <div class="label">Main mock: light</div>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+    <div class="viewport">
+      <div class="wrap">
+        <div class="hd"><h3>Today</h3><span class="date">Thursday, October 1</span></div>
+        <div class="pills"><span class="on">All</span><span>To do</span><span>In progress</span><span>Done</span><span>Cancelled</span></div>
+        <div class="list">
+          <div class="card overdue sel">
+            <div class="row">
+              <span class="mark od"><svg><use href="#i-todo"/></svg></span>
+              <span class="title">Submit report</span>
+              <span class="odlabel" style="font-size:12.5px"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span>
+              <span class="due" style="color:var(--overdue)">Yesterday, 5:00 PM</span>
+            </div>
+            <div class="actbar" style="background:var(--overdueTint);box-shadow:inset 3px 0 0 var(--overdue);padding-top:2px">
+              <span class="btn outline sm">Start <span class="kbd">S</span></span>
+              <span class="btn outline sm">Complete <span class="kbd">C</span></span>
+              <span class="btn outline sm">Cancel <span class="kbd">X</span></span>
+              <span class="btn ghost sm" style="margin-left:auto">Delete <span class="kbd">⌫</span></span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <span class="mark prog"><svg><use href="#i-prog"/></svg></span>
+              <span class="title">Call the dentist</span>
+              <span class="chip prog">In progress</span>
+              <span class="due">Fri, 10:00 AM</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <span class="mark"><svg><use href="#i-todo"/></svg></span>
+              <span class="title">Book flights to Lisbon</span>
+              <span class="due">Oct 12, 9:00 AM</span>
+            </div>
+          </div>
+        </div>
+        <div class="fin">
+          <div class="disc"><svg class="ico"><use href="#i-chev"/></svg>Finished (2)</div>
+          <div class="list">
+            <div class="card ghost"><div class="row done"><span class="mark fin"><svg><use href="#i-done"/></svg></span><span class="title">Pay rent</span><span class="due">Done</span></div></div>
+            <div class="card ghost"><div class="row cancelled"><span class="mark fin"><svg><use href="#i-cancel"/></svg></span><span class="title">Renew passport</span><span class="due">Cancelled</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="toast">Marked “Pay rent” done <span class="undo">Undo</span><span class="count">4s</span></div>
+      <div class="composer"><svg class="ico"><use href="#i-plus"/></svg>Add a task<span class="r"><span class="kbd">⌘K</span><span class="btn ghost sm"><svg class="ico" style="width:14px;height:14px"><use href="#i-cal"/></svg>Due</span><span class="btn primary sm">Add</span></span></div>
+    </div>
+  </div>
+  <div class="label" style="margin-top:4px">Selected In progress card shows: Move back (B) · Complete (C) · Cancel (X)</div>
+
+  <div class="label">State variant: editing a card in place</div>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+    <div class="viewport" style="height:440px">
+      <div class="wrap">
+        <div class="hd"><h3>Today</h3><span class="date">Thursday, October 1</span></div>
+        <div class="pills"><span class="on">All</span><span>To do</span><span>In progress</span><span>Done</span><span>Cancelled</span></div>
+        <div class="list">
+          <div class="card overdue"><div class="row"><span class="mark od"><svg><use href="#i-todo"/></svg></span><span class="title">Submit report</span><span class="odlabel" style="font-size:12.5px"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span></div></div>
+          <div class="card sel">
+            <div class="edit">
+              <div class="input focus"><span class="val">Book flights to Lisbon</span><span class="caret" style="margin-left:-4px"></span></div>
+              <div class="line">
+                <span class="btn outline sm"><svg class="ico" style="width:14px;height:14px"><use href="#i-cal"/></svg>Oct 12</span>
+                <span class="btn outline sm"><svg class="ico" style="width:14px;height:14px"><use href="#i-clock"/></svg>9:00 AM</span>
+                <span class="btn ghost sm">Clear due date</span>
+                <span style="margin-left:auto;display:flex;gap:6px"><span class="btn ghost sm">Cancel <span class="kbd">Esc</span></span><span class="btn primary sm">Save <span class="kbd" style="background:transparent;color:var(--onAccent);border-color:rgba(255,255,255,.35)">↵</span></span></span>
+              </div>
+            </div>
+          </div>
+          <div class="card"><div class="row"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title">Call the dentist</span><span class="due">Fri, 10:00 AM</span></div></div>
+        </div>
+      </div>
+      <div class="composer" style="opacity:.55"><svg class="ico"><use href="#i-plus"/></svg>Add a task<span class="r"><span class="kbd">⌘K</span></span></div>
+    </div>
+  </div>
+
+  <div class="label">Dark mode</div>
+  <div class="thumbwrap">
+    <div class="frame dark thumb">
+      <div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+      <div class="viewport mini" style="padding-bottom:62px">
+        <h5 style="font-weight:500">Today</h5>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="row overdue" style="padding:9px 12px;border-radius:11px"><span class="mark od"><svg><use href="#i-todo"/></svg></span><span class="title">Submit report</span><span class="odlabel"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span></div>
+          <div class="row" style="padding:9px 12px;border-radius:11px;background:var(--surface);border:1px solid var(--border)"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title">Call the dentist</span><span class="due">Fri</span></div>
+        </div>
+        <div class="toast" style="left:50%;transform:translateX(-50%);bottom:44px;border-radius:999px">Marked “Pay rent” done <span class="undo">Undo</span></div>
+        <div style="position:absolute;left:18px;right:18px;bottom:10px;height:28px;border-radius:999px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;padding:0 12px;color:var(--muted);font-size:11px">+ Add a task</div>
+      </div>
+    </div>
+    <div class="thumbnote">In dark mode the composer swaps its drop shadow for a 1px border, since shadows barely show on #161616.</div>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

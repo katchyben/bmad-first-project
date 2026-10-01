@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Main List</title>
+<style>
+/*
+  KEY SCREEN MOCK — illustrates the spines; the spines are the contract.
+  Governing sections:
+  DESIGN.md: Colors (light + dark), Typography, Layout & Spacing, Shapes, Elevation & Depth;
+    Components: Task row (overdue, in progress, selected), Add-task input, Add description link,
+    Status filter, Finished section header, Undo toast, Log out, Keyboard hint.
+  EXPERIENCE.md: Information Architecture (main list regions); Component Patterns: Task row,
+    Add-task input, Add description link, Status filter, Finished section header, Undo toast, Log out;
+    Due date-time entry (presets, display format); State Patterns: Overdue present,
+    Finished section collapsed, Focus; Interaction Primitives: keyboard map (direction D hints);
+    Voice and Tone: Completed toast. Flow 1 step 2, Flow 2 step 2.
+*/
+/* ---- Graphite Hush tokens (DESIGN.md colors) ---- */
+.light{--background:#F4F4F3;--foreground:#1F1F1F;--card:#FFFFFF;--popover:#FFFFFF;--muted-foreground:#5F5F5F;--border:#E2E2E0;--input:#E2E2E0;--ring:#1F1F1F;--primary:#1F1F1F;--primary-foreground:#FFFFFF;--accent:#F7F7F6;--destructive:#1F1F1F;--overdue:#C2341A;--overdue-tint:#FDEEEA;--in-progress:#3D3D3D;--finished:#6A6A6A;--row-hover:#F7F7F6;--row-selected:#F0F0EE;--toast-background:#1F1F1F;--toast-foreground:#F4F4F3;--toast-action:#FF8A70;--focus-soft:0 0 0 3px rgba(31,31,31,.08);--chrome:#E7E7E5;--chrome-line:#D6D6D4;--chrome-dot:#CFCFCC;--chrome-url:#F4F4F3;--chrome-url-text:#5F5F5F}
+.dark{--background:#161616;--foreground:#EAEAEA;--card:#1E1E1E;--popover:#1E1E1E;--muted-foreground:#A0A0A0;--border:#333333;--input:#333333;--ring:#EAEAEA;--primary:#EAEAEA;--primary-foreground:#161616;--accent:#242424;--destructive:#EAEAEA;--overdue:#FF7A5C;--overdue-tint:#352019;--in-progress:#CFCFCF;--finished:#9A9A9A;--row-hover:#242424;--row-selected:#262626;--toast-background:#EAEAEA;--toast-foreground:#161616;--toast-action:#B32E15;--focus-soft:0 0 0 3px rgba(234,234,234,.12);--chrome:#262626;--chrome-line:#333333;--chrome-dot:#444444;--chrome-url:#1E1E1E;--chrome-url-text:#A0A0A0}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#EBEBEA;color:#1F1F1F;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;padding:28px 32px 48px}
+.page-head{max-width:1560px;margin:0 0 18px}
+.page-head h1{font-size:18px;font-weight:600;margin:0 0 4px}
+.page-head p{font-size:13px;color:#5F5F5F;margin:0;max-width:760px;line-height:1.5}
+.cols{display:grid;grid-template-columns:repeat(2,760px);gap:28px;align-items:start}
+.label{font-size:12px;font-weight:600;color:#5F5F5F;margin:0 0 8px;letter-spacing:.01em}
+.note{font-size:12px;color:#5F5F5F;margin:8px 0 0;line-height:1.5}
+
+/* browser frame */
+.frame{border:1px solid var(--chrome-line);border-radius:10px;overflow:hidden;background:var(--background);box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
+.chrome{height:32px;background:var(--chrome);border-bottom:1px solid var(--chrome-line);display:flex;align-items:center;gap:6px;padding:0 12px}
+.chrome i{width:10px;height:10px;border-radius:50%;background:var(--chrome-dot);display:block}
+.chrome .url{margin-left:14px;flex:1;height:20px;border-radius:5px;background:var(--chrome-url);font-size:11px;color:var(--chrome-url-text);display:flex;align-items:center;padding:0 10px}
+.viewport{position:relative;background:var(--background);color:var(--foreground);overflow:hidden;font-size:16px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding:48px 0 0}
+
+/* primitives */
+.ico{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;font-weight:400;border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:0 4px;color:var(--muted-foreground);background:var(--card);line-height:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid transparent;background:transparent;color:var(--foreground);font:inherit;font-size:13px;font-weight:500;height:32px;padding:0 12px;border-radius:10px;white-space:nowrap;line-height:1}
+.btn.sm{height:26px;padding:0 8px;font-size:12px}
+.btn.primary{background:var(--primary);color:var(--primary-foreground)}
+.btn.ghost.muted{color:var(--muted-foreground)}
+.caret{display:inline-block;width:1px;height:17px;background:var(--foreground);margin-left:1px;vertical-align:middle}
+
+/* main-list app regions (DESIGN.md Layout & Spacing, Components) */
+.hd{display:flex;align-items:flex-start;justify-content:space-between}
+.hd h2{margin:0;font-size:32px;font-weight:300;line-height:1.2;letter-spacing:-.02em}
+.hd .date{font-size:14px;font-weight:400;color:var(--muted-foreground);margin-top:4px}
+.hd .btn{margin-top:4px}
+.tabs{display:flex;gap:22px;margin:26px 0 18px;font-size:13.5px;color:var(--muted-foreground)}
+.tabs span{padding-bottom:6px}
+.tabs .on{color:var(--foreground);box-shadow:inset 0 -1.5px 0 var(--foreground)}
+.add{display:flex;align-items:center;gap:8px;height:48px;padding:0 16px;border:1px solid var(--input);border-radius:12px;background:var(--card);color:var(--muted-foreground);font-size:15px}
+.add.focus{border-color:var(--foreground);box-shadow:var(--focus-soft)}
+.add .val{color:var(--foreground)}
+.add .kbd{margin-left:auto}
+.chips{display:flex;gap:6px;margin-top:8px;padding-left:40px;position:relative}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border:1px solid var(--border);border-radius:9999px;background:var(--card);color:var(--muted-foreground);font-size:11.5px;font-weight:400;white-space:nowrap}
+.chip .ico{width:12px;height:12px}
+.chip.on{background:var(--primary);border-color:var(--primary);color:var(--primary-foreground)}
+.desc-link{display:inline-block;margin-top:8px;padding-left:40px;font-size:13px;color:var(--muted-foreground)}
+.desc-area{margin-top:8px;height:92px;padding:10px 16px;border:1px solid var(--input);border-radius:12px;background:var(--card);color:var(--muted-foreground);font-size:15px;line-height:1.5}
+.field-error{margin:6px 0 0;padding-left:16px;font-size:13px;color:var(--foreground)}
+.list{margin-top:18px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.row{position:relative;display:flex;align-items:center;gap:12px;min-height:58px;padding:16px 22px;border-top:1px solid var(--border);font-size:16px;color:var(--foreground)}
+.row:first-child{border-top:0}
+.row .title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .due{font-size:13px;color:var(--muted-foreground);white-space:nowrap}
+.mark{width:18px;height:18px;flex:none;display:inline-flex;color:var(--muted-foreground)}
+.mark svg{width:18px;height:18px}
+.mark.prog{color:var(--in-progress)}
+.row.overdue{background:var(--overdue-tint);box-shadow:inset 3px 0 0 var(--overdue)}
+.row.overdue .mark,.row.overdue .due{color:var(--overdue)}
+.odlabel{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--overdue);white-space:nowrap}
+.odlabel .ico{width:14px;height:14px}
+.row.selected{background:var(--row-selected);box-shadow:inset 0 0 0 2px var(--ring)}
+.acts{display:flex;gap:2px;margin-right:-8px}
+.acts .kbd{margin-left:2px}
+.fin{margin-top:22px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted-foreground)}
+.fin .ico{width:14px;height:14px}
+.toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;padding:12px 18px;border-radius:12px;background:var(--toast-background);color:var(--toast-foreground);font-size:13px;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.toast .undo{color:var(--toast-action);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.toast .count{opacity:.7;font-variant-numeric:tabular-nums}
+
+
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-todo" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-prog" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.75a7.25 7.25 0 0 1 0 14.5z" fill="currentColor"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5v5.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.25" fill="currentColor"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-chevr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-chevl" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+</defs></svg>
+<header class="page-head"><h1>Key screen: main list</h1><p>All view at rest. 'Submit report' is overdue at the top; 'Book flights to Lisbon' is selected with its To do actions and their keys; Finished is collapsed; an Undo toast is counting down.</p></header>
+<div class="cols">
+<div><div class="label">Light</div><div class="frame light"><div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+<div class="viewport" style="height:720px"><div class="wrap"><div class="hd"><div><h2>Today</h2><div class="date">Thursday, October 1</div></div><span class="btn ghost muted">Log out</span></div>
+<div class="tabs" role="tablist"><span class="on">All</span><span>To do</span><span>In progress</span><span>Done</span><span>Cancelled</span></div>
+<div class="add"><svg class="ico"><use href="#i-plus"/></svg>Add a task<span class="kbd">⌘K</span></div>
+<div class="chips"><span class="chip on">Tomorrow 9:00 AM</span><span class="chip">Next Monday 9:00 AM</span><span class="chip"><svg class="ico"><use href="#i-cal"/></svg>Pick date…</span></div>
+<span class="desc-link">Add description</span>
+<div class="list"><div class="row overdue"><span class="mark"><svg><use href="#i-todo"/></svg></span><span class="title">Submit report</span><span class="odlabel"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span><span class="due">Yesterday, 5:00 PM</span></div><div class="row"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title">Call the dentist</span><span class="due">Fri, 10:00 AM</span></div><div class="row selected" aria-selected="true"><span class="mark"><svg><use href="#i-todo"/></svg></span><span class="title">Book flights to Lisbon</span>
+<span class="acts"><span class="btn ghost sm">Start<span class="kbd">S</span></span><span class="btn ghost sm">Complete<span class="kbd">C</span></span><span class="btn ghost sm">Cancel<span class="kbd">X</span></span><span class="btn ghost sm">Edit<span class="kbd">E</span></span><span class="btn ghost sm">Delete<span class="kbd">⌫</span></span></span></div></div>
+<div class="fin" aria-expanded="false"><svg class="ico"><use href="#i-chevr"/></svg>Finished (2)</div></div>
+<div class="toast" role="status">Marked 'Pay rent' done ·<span class="undo">Undo</span><span class="count">4s</span></div></div></div></div>
+<div><div class="label">Dark</div><div class="frame dark"><div class="chrome"><i></i><i></i><i></i><div class="url">todo.local/today</div></div>
+<div class="viewport" style="height:720px"><div class="wrap"><div class="hd"><div><h2>Today</h2><div class="date">Thursday, October 1</div></div><span class="btn ghost muted">Log out</span></div>
+<div class="tabs" role="tablist"><span class="on">All</span><span>To do</span><span>In progress</span><span>Done</span><span>Cancelled</span></div>
+<div class="add"><svg class="ico"><use href="#i-plus"/></svg>Add a task<span class="kbd">⌘K</span></div>
+<div class="chips"><span class="chip on">Tomorrow 9:00 AM</span><span class="chip">Next Monday 9:00 AM</span><span class="chip"><svg class="ico"><use href="#i-cal"/></svg>Pick date…</span></div>
+<span class="desc-link">Add description</span>
+<div class="list"><div class="row overdue"><span class="mark"><svg><use href="#i-todo"/></svg></span><span class="title">Submit report</span><span class="odlabel"><svg class="ico"><use href="#i-alert"/></svg>Overdue</span><span class="due">Yesterday, 5:00 PM</span></div><div class="row"><span class="mark prog"><svg><use href="#i-prog"/></svg></span><span class="title">Call the dentist</span><span class="due">Fri, 10:00 AM</span></div><div class="row selected" aria-selected="true"><span class="mark"><svg><use href="#i-todo"/></svg></span><span class="title">Book flights to Lisbon</span>
+<span class="acts"><span class="btn ghost sm">Start<span class="kbd">S</span></span><span class="btn ghost sm">Complete<span class="kbd">C</span></span><span class="btn ghost sm">Cancel<span class="kbd">X</span></span><span class="btn ghost sm">Edit<span class="kbd">E</span></span><span class="btn ghost sm">Delete<span class="kbd">⌫</span></span></span></div></div>
+<div class="fin" aria-expanded="false"><svg class="ico"><use href="#i-chevr"/></svg>Finished (2)</div></div>
+<div class="toast" role="status">Marked 'Pay rent' done ·<span class="undo">Undo</span><span class="count">4s</span></div></div></div></div>
+</div>
+</body></html>

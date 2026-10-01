@@ -1,0 +1,39 @@
+---
+title: "Input Reconciliation: PRD vs Product Brief"
+created: 2026-10-01
+input: briefs/brief-bmad-first-project-2026-10-01/brief.md + addendum.md
+prd: prds/prd-bmad-first-project-2026-10-01/prd.md + addendum.md
+---
+
+# Input Reconciliation: PRD vs Product Brief
+
+**Verdict: Faithful, with minor gaps.** Nothing in the brief or its addendum is contradicted. Every business rule (BR-1 to BR-8), every status-table cell, every field, every scope item and every confirmed decision is in the PRD. The gaps below are about testability, traceability and small dropped details. None of them is a blocker.
+
+Intentional refinements made after the brief were not flagged: blocking past due date-times on create and date change, while other fields of overdue tasks stay editable; tie-breaks for both orderings; undo as the only action during the window; title max 200 and description max 5,000; filter semantics; 7-day sessions; under 300 ms with 1,000 tasks; browser time zone; permanent delete; collapse state and filter not remembered; FR-17.
+
+## Gaps
+
+| # | Severity | Brief source | PRD location | Gap | Suggested fix |
+|---|---|---|---|---|---|
+| G1 | Medium | Success criterion 3: "every business rule in the addendum is enforced by the API and covered by tests" | §4.3 FR-7 to FR-10; §8 SM-3; NFR-6 | **The tests for success criterion 3 are weaker than the brief asks.** SM-3 and NFR-6 measure coverage as "FR consequences". FR-7, FR-8, FR-9 and FR-10 have no Consequences bullets. FR-12 only covers the *disallowed* moves. The allowed moves (To do → In progress, In progress → To do, To do or In progress → Done, To do or In progress → Cancelled) therefore have no testable consequence that SM-3 would count. | Add Consequences to FR-7 to FR-10, for example "the status becomes X" and "Done/Cancelled opens the undo window". Or make SM-3 cover every ✅ cell in the §4.3 table too. |
+| G2 | Medium | Brief success criterion 3 and addendum BR-1 to BR-8 | Whole PRD (no BR IDs appear) | **There is no BR-to-FR traceability.** The brief measures success against BR-1 to BR-8, but the PRD never mentions them. This review found the mapping complete: BR-1→FR-13, BR-2→FR-14, BR-3→FR-4/FR-5, BR-4→§3 Overdue/FR-14, BR-5→FR-15, BR-6→FR-12, BR-7→FR-11, BR-8→FR-6. Without it written down, though, later steps cannot show that criterion 3 is met. | Add a short BR→FR trace table, or "(BR-n)" tags on the FRs. |
+| G3 | Low–Medium | Brief confirmed decision: "The undo window is 5 seconds"; BR-7 | PRD addendum, "Undo mechanics" | **The confirmed 5-second window could be quietly stretched.** The PRD addendum suggests a server-side grace period beyond 5 s. It does say to decide the value explicitly, but the PRD body (FR-11, §3) still says exactly 5 seconds. If architecture adopts a grace period, the window the user actually gets differs from what was confirmed. | State in FR-11 that the user-facing window is 5 s. If a grace period is allowed, also state its maximum and that the UI still hides Undo at 5 s. Or remove the suggestion. |
+| G4 | Low | Addendum status table, "—" cells (Start on In progress, Back to To do on To do, Mark done on Done, Cancel on Cancelled, Undo on To do or In progress) | §4.3 table; FR-12 | **The "—" cells still have no defined behaviour.** The PRD copies the brief's "—" cells exactly but never says what the API does when one is requested: reject with a state-conflict error, or treat it as a no-op. FR-12 only covers ❌ cells and finished tasks. Undo on an active task (for example, a second undo after an undo) is likewise unspecified. Nothing is contradicted, but the backend rules are left incomplete. | Define "—" as rejected with a state-conflict error (or as an idempotent no-op) and add a test bullet. |
+| G5 | Low | BR-7 / scope: "5-second undo for marking done and cancelling" (a user-facing capability) | FR-11 | **No requirement says the frontend shows Undo.** FR-11 covers only the API. Only UJ-2 and an addendum note ("UI hides the Undo control at 5 seconds") imply an Undo control. Compare FR-14, which explicitly requires the frontend to highlight overdue tasks. | Add a Consequence: "after Done or Cancelled, the frontend offers Undo until the window closes." |
+| G6 | Low | BR-3 implication: "the UI should make picking one fast" | FR-4 | **A UX intent was dropped:** the guidance that choosing a due date-time should be quick. | Carry it into the UX step, or add a short note to FR-4. |
+| G7 | Low | Brief open question: "the early recommendation is a separate single-page app that talks only to the API" | §7.1, §9, addendum | **A recommendation for architecture was dropped.** The PRD lists frontend technology as open but leaves out the brief's early recommendation of a separate single-page app. NFR-1 keeps the "talks only to the API" part. | Mention the recommendation in §9 or the PRD addendum. |
+| G8 | Low | Brief open questions for architecture: "where overdue is computed" and "server or client undo enforcement" | §3 Overdue, FR-14, NFR-3 vs §9 | **The PRD half-decides two questions the brief left to architecture.** The glossary, FR-14 and NFR-3 fix the server clock and a server-returned overdue indicator, and NFR-3 makes the server the source of truth for the undo window. Yet §9 still lists both as open. This matches the brief addendum's lean towards the server, so it is not a contradiction, but the PRD is internally ambiguous. | Either mark these as decided in the PRD, or narrow §9 to what remains open (for example, whether the frontend may recompute overdue live, and the grace period). |
+| G9 | Info | Brief "Who This Serves": "an intermediate developer ... with no skipping" | §2.1 | **Some learner context was softened.** "Intermediate developer" and "no skipping" are gone; §2.1 says "practise every BMad step", which keeps most of the intent. | Optional. |
+
+## Checked and fully covered
+
+- **Business rules:** BR-1 (FR-13), BR-2 (FR-14), BR-3 (FR-4, FR-5 "cannot be removed"), BR-4 (§3 Overdue, FR-14 "finished never overdue"), BR-5 (FR-15), BR-6 (FR-12), BR-7 (FR-11, returns to the previous status), BR-8 (FR-6).
+- **Status table:** every ✅, ❌ and — cell matches. The PRD table and FR-5/FR-6 reproduce the Edit and Delete rows, and the PRD table reproduces the Start, Back to To do, Mark done, Cancel and Undo rows. API enforcement is in FR-12 and NFR-1.
+- **Fields:** title (required, non-empty, max length set), description (optional free text), due date-time (required), status (To do on create, and the client cannot override it). System fields are left to architecture, and the PRD addendum names the previous status and the status-changed timestamp.
+- **In scope:** login and logout, create/edit/delete under the rules, start/done/cancel with undo, the sorted active list with overdue highlighting, the collapsible finished section, the status filter, and a FastAPI backend with a separate frontend. All are present.
+- **Out of scope:** self sign-up and registration, multiple users (§6), password reset, change-password, reminders and notifications, recurring tasks, search, subtasks, priority, tags, mobile, offline use, and export or import. All are present. SSO was added, consistent with the brief addendum.
+- **Confirmed decisions:** 5-second undo; finished tasks most recent first; one time zone, stored in UTC and shown in local time; credentials changed through the setup mechanism. All are present.
+- **Brief open questions for the PRD:** title max length and filter interaction are both resolved (FR-4, FR-16).
+- **Authentication notes:** a pre-created account, auth on every task call (FR-3), no per-task owner, password hashing (NFR-5), logout (FR-2).
+- **Success criteria 1 and 2:** SM-1 and SM-2.
+- **Qualitative intent:** "the app is the vehicle, the method is the point" (§1, §6), "simple in features, strict in rules" (§1, SM-C1), "honest record" and "notice at a glance" (§2.1), and real business rules as the differentiator (§1).
