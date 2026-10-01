@@ -19,6 +19,9 @@ dependencies = [
     "uvicorn==0.54.0",
 ]
 
+[project.scripts]
+create-account = "bmad_first_project.cli:create_account"
+
 [dependency-groups]
 dev = [
     "httpx==0.28.1",

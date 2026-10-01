@@ -3,8 +3,8 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlmodel import SQLModel
 
+from bmad_first_project.adapters.persistence import tables
 from bmad_first_project.adapters.persistence.engine import make_engine
 from bmad_first_project.settings import Settings
 
@@ -15,7 +15,8 @@ if config.config_file_name is not None and config.attributes.get(
 ):
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-target_metadata = SQLModel.metadata
+# Importing `tables` registers every table model on the shared metadata.
+target_metadata = tables.metadata
 
 
 def _url() -> str:
