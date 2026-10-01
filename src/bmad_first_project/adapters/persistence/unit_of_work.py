@@ -1,0 +1,46 @@
+"""The SQL unit of work: the only place in the codebase that commits."""
+
+from types import TracebackType
+from typing import Self
+
+from sqlalchemy import Engine
+from sqlalchemy.orm import Session
+
+
+class SqlUnitOfWork:
+    """Owns one `Session` per `with` block; commits on success, rolls back on error."""
+
+    def __init__(self, engine: Engine) -> None:
+        self._engine = engine
+        self._session: Session | None = None
+
+    @property
+    def session(self) -> Session:
+        """The open session, for repositories in this adapter only."""
+        if self._session is None:
+            raise RuntimeError("SqlUnitOfWork is not active; use it in a `with` block.")
+        return self._session
+
+    def __enter__(self) -> Self:
+        if self._session is not None:
+            raise RuntimeError("SqlUnitOfWork is already active.")
+        self._session = Session(self._engine)
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        session = self.session
+        try:
+            if exc_type is None:
+                session.commit()
+            else:
+                session.rollback()
+        finally:
+            try:
+                session.close()
+            finally:
+                self._session = None

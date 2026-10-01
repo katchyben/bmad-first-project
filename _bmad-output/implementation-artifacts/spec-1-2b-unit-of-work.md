@@ -2,9 +2,10 @@
 title: 'Story 1.2b: Unit of work'
 type: 'feature'
 created: '2026-10-01'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: 'c7d4610c91709e71834f29ec8e17e1133bfe2b64'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
 ---
@@ -50,12 +51,12 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/bmad_first_project/application/ports.py` -- the `UnitOfWork` Protocol -- AR15
-- [ ] `src/bmad_first_project/adapters/persistence/unit_of_work.py` -- `SqlUnitOfWork` -- AR15
-- [ ] `src/bmad_first_project/adapters/http/dependencies.py` -- `get_unit_of_work` and `UnitOfWorkDep` -- AR15
-- [ ] `src/bmad_first_project/main.py` -- `app.state.unit_of_work_factory = lambda: SqlUnitOfWork(engine)` -- AR1, AR15
-- [ ] `tests/persistence/test_unit_of_work.py` -- the direct-use matrix row -- NFR6
-- [ ] `tests/api/test_unit_of_work.py` -- the HTTP matrix rows using test-only routes on `make_app()` and `TestClient(raise_server_exceptions=False)` where a 500 is expected -- NFR6
+- [x] `src/bmad_first_project/application/ports.py` -- the `UnitOfWork` Protocol -- AR15
+- [x] `src/bmad_first_project/adapters/persistence/unit_of_work.py` -- `SqlUnitOfWork` -- AR15
+- [x] `src/bmad_first_project/adapters/http/dependencies.py` -- `get_unit_of_work` and `UnitOfWorkDep` -- AR15
+- [x] `src/bmad_first_project/main.py` -- `app.state.unit_of_work_factory = lambda: SqlUnitOfWork(engine)` -- AR1, AR15
+- [x] `tests/persistence/test_unit_of_work.py` -- the direct-use matrix row -- NFR6
+- [x] `tests/api/test_unit_of_work.py` -- the HTTP matrix rows using test-only routes on `make_app()` and `TestClient(raise_server_exceptions=False)` where a 500 is expected -- NFR6
 
 **Acceptance Criteria:**
 - Given the repo, when `uv run ruff check .`, `uv run ruff format --check .` and `uv run pytest` run, then all pass, including the import-boundary test.
@@ -66,6 +67,28 @@ context:
 ## Spec Change Log
 
 ## Review Triage Log
+
+Pass 1 (blind = B, edge-case = E, verification-gap = V):
+
+| # | Finding | Verdict | Evidence | Route |
+|---|---------|---------|----------|-------|
+| B4 | Public `get_unit_of_work` used via plain `Depends()` gets request scope and commits after the response | medium | Real: only the alias carries `scope="function"`; V's mutation shows request scope breaks commit-before-response. Direct fix: make it private | patch |
+| B3/V | "Only the UoW commits" is checked only by a manual grep | medium | `tests/architecture/` has no commit check; a later repository `commit()` would pass CI | patch |
+| E1 | If `session.close()` raises, `_session` is never reset and the UoW stays "active" | low | Real at `unit_of_work.py` `finally`; a direct correction with a nested `finally` | patch |
+| B5 | `test_success_commits_before_response` can't observe ordering | low | `TestClient` returns after the whole ASGI call; only the commit-failure test proves ordering. Rename | patch |
+| B6 | The commit-failure persistence test doesn't assert the session is closed | low | Its two sibling tests do; a direct test addition | patch |
+| B1/E2 | A failing `rollback()` masks the route's exception (404 → 500) | low | A rollback failure on SQLite means the connection is broken; a loud 500 is acceptable; the fix adds a guard | reject |
+| E3 | `close()` raising after a successful commit gives 500 | low | Contrived; `close()` on a committed SQLite session doesn't raise in practice | reject |
+| B2 | `expire_on_commit=True` breaks routes returning ORM objects | false | The architecture maps table rows to plain domain objects inside repositories, and routes return `TaskResponse` from `TaskView`, so no ORM object outlives the session | reject |
+| E4 | pysqlite doesn't `BEGIN` before the first DML, so read-then-write isn't atomic | medium | Known pysqlite legacy transaction behaviour, inherited from 1.2a's `make_engine`, not caused by this story | defer |
+| B7 | Re-entry and pre-enter `.session` guards untested | low | No caller relies on them (V agrees it's not a gap) | reject |
+| B8 | The factory test doesn't check which engine is used | false | The HTTP tests read rows back from `migrated_engine`; a wrong engine would fail them (V) | reject |
+| B9 | The port exposes no repositories | low | Repositories are excluded by the intent; 1.4 adds them | reject |
+| B10 | Duplicated scratch helpers in two test files | low | Cosmetic | reject |
+| B11 | The factory lambda is untyped at wiring | low | Wrong shapes fail every UoW test immediately | reject |
+| E5 | A route returning an error `Response` (not raising) commits | low | The codebase signals errors by raising domain errors (1.1b); no route returns error responses | reject |
+| E6 | `StreamingResponse` bodies read after the session closes | false | No streaming routes exist or are planned | reject |
+| E7 | "database is locked" shows as a 500 | low | Single-user local app | reject |
 
 ## Verification
 
