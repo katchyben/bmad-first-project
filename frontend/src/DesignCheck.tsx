@@ -1,3 +1,5 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { ServerError } from '@/api/errors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -37,6 +39,18 @@ const SWATCHES: Record<string, string> = {
 
 // Test fixture for e2e/design.spec.ts, rendered only at `/?design-check`.
 export default function DesignCheck() {
+  const queryClient = useQueryClient();
+
+  // Fail a query with a 5xx through the app's query client, so the global error hook fires.
+  function failQuery() {
+    void queryClient
+      .fetchQuery({
+        queryKey: ['design-check', 'server-error'],
+        queryFn: () => Promise.reject(new ServerError(500, null)),
+      })
+      .catch(() => {});
+  }
+
   return (
     <main className="flex flex-col items-start gap-4 p-4">
       <Button data-testid="button">Button</Button>
@@ -72,6 +86,9 @@ export default function DesignCheck() {
         Fade
       </div>
       <kbd data-testid="kbd">Esc</kbd>
+      <Button data-testid="server-error" variant="outline" onClick={failQuery}>
+        Fail a query
+      </Button>
       <ul aria-hidden="true" className="flex flex-wrap gap-1">
         {Object.entries(SWATCHES).map(([token, className]) => (
           <li key={token} data-swatch={token} className={`size-4 ${className}`} />

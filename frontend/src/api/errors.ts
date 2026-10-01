@@ -1,3 +1,5 @@
+import { isCancelledError } from '@tanstack/react-query';
+
 export const FALLBACK_MESSAGE = 'Something went wrong. Try again.';
 
 /** A 5xx response. Its body is never shown, so the helper falls back. */
@@ -50,4 +52,17 @@ export function errorMessage(error: unknown, response?: Response): string {
   if (error instanceof ServerError) return FALLBACK_MESSAGE;
   if (response !== undefined && response.status >= 500) return FALLBACK_MESSAGE;
   return envelopeMessage(error) ?? FALLBACK_MESSAGE;
+}
+
+/**
+ * True when a failure has nothing user-specific to say, so the app shows the
+ * fallback in the global error toast: a 5xx, or a body without an envelope
+ * `message`. Unreachable failures (network, gateway 502/503/504) belong to the
+ * connection banner, envelope messages to the place the user acted, and a
+ * cancelled query is not a failure, so none of these is toasted globally.
+ */
+export function needsGlobalErrorToast(error: unknown): boolean {
+  if (isUnreachable(error) || isCancelledError(error)) return false;
+  if (error instanceof ServerError) return true;
+  return envelopeMessage(error) === undefined;
 }

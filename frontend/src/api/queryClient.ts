@@ -1,4 +1,5 @@
-import { QueryClient } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { handleGlobalError } from './errorToast';
 import { isUnreachable } from './errors';
 
 export const MAX_RETRY_DELAY_MS = 30_000;
@@ -15,6 +16,9 @@ export function shouldRetryQuery(_failureCount: number, error: unknown): boolean
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
+    // A failure with nothing specific to say shows the fallback error toast.
+    queryCache: new QueryCache({ onError: handleGlobalError }),
+    mutationCache: new MutationCache({ onError: handleGlobalError }),
     defaultOptions: {
       queries: {
         retry: shouldRetryQuery,

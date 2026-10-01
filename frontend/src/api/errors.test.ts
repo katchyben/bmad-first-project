@@ -1,5 +1,6 @@
+import { CancelledError } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
-import { FALLBACK_MESSAGE, ServerError, errorMessage } from './errors';
+import { FALLBACK_MESSAGE, NetworkError, ServerError, errorMessage, needsGlobalErrorToast } from './errors';
 
 describe('errorMessage', () => {
   it('returns the envelope message verbatim', () => {
@@ -33,5 +34,23 @@ describe('errorMessage', () => {
 
   it('uses the exact fallback sentence', () => {
     expect(FALLBACK_MESSAGE).toBe('Something went wrong. Try again.');
+  });
+});
+
+describe('needsGlobalErrorToast', () => {
+  it.each<[string, unknown, boolean]>([
+    ['500', new ServerError(500, null), true],
+    ['501', new ServerError(501, null), true],
+    ['gateway 502', new ServerError(502, null), false],
+    ['gateway 503', new ServerError(503, null), false],
+    ['gateway 504', new ServerError(504, null), false],
+    ['cancelled query', new CancelledError(), false],
+    ['5xx with an envelope body', new ServerError(500, { error: { code: 'x', message: 'Hi.' } }), true],
+    ['string body', 'Internal Server Error', true],
+    ['FastAPI default', { detail: 'Not Found' }, true],
+    ['envelope', { error: { code: 'state_conflict', message: 'Already done.' } }, false],
+    ['network failure', new NetworkError(new TypeError('Failed to fetch')), false],
+  ])('%s', (_label, error, expected) => {
+    expect(needsGlobalErrorToast(error)).toBe(expected);
   });
 });
