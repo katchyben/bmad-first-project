@@ -7,11 +7,49 @@ authors = [
     { name = "Benny Katchy", email = "bennykatchy@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "alembic==1.20.0",
+    "fastapi==0.142.2",
+    "pwdlib[argon2]==0.3.1",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+    "python-multipart==0.0.32",
+    "sqlalchemy==2.0.54",
+    "sqlmodel==0.0.47",
+    "uvicorn==0.54.0",
+]
 
-[project.scripts]
-bmad-first-project = "bmad_first_project:main"
+[dependency-groups]
+dev = [
+    "httpx==0.28.1",
+    "pytest==9.1.1",
+    "ruff==0.16.9",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.1,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.ruff]
+target-version = "py313"
+extend-exclude = [".agents", ".claude", "_bmad", "_bmad-output"]
+
+[tool.ruff.lint]
+extend-select = ["DTZ", "TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"datetime.datetime.now".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+"datetime.datetime.utcnow".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+"datetime.datetime.today".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+"datetime.date.today".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+"time.time".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+"time.time_ns".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+"time.localtime".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+"time.gmtime".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+"time.ctime".msg = "Read time from the Clock port; only adapters/clock.py may call this."
+
+[tool.ruff.lint.per-file-ignores]
+"src/bmad_first_project/adapters/clock.py" = ["TID251"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
