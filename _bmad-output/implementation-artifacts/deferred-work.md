@@ -10,3 +10,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-1b-error-envelope-and-openapi-contract.md`
   summary: For Story 1.1c, publish `ErrorBody.reason` in OpenAPI as an optional, non-nullable string; today `reason: str | None = None` would generate `anyOf: [string, null]`, contradicting the "reason appears only when set, never null" rule the runtime enforces with `exclude_none`.
   evidence: Found in the 1.1b review (finding B7); 1.1b changes no OpenAPI output, so it only matters once 1.1c adds `ErrorResponse` to the schema and the frontend client is generated from it.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1c-openapi-error-contract.md`
+  summary: Duplicate operation IDs only raise FastAPI's `UserWarning: Duplicate Operation ID`; since operation IDs are route function names, fail loudly (a uniqueness check in the `openapi()` override, or a test over `app.openapi()`) before the frontend client is generated.
+  evidence: Found by the 1.1c review: two routes whose functions share a name both get the same `operationId` and the schema still builds, so `@hey-api/openapi-ts` in Story 1.3 would get clashing names.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1c-openapi-error-contract.md`
+  summary: Routes added from Story 1.5 on must declare their non-422 error statuses (401, 404, 409) with `ErrorResponse` in `responses=`, as the architecture requires every route to declare `ErrorResponse`; consider a shared helper next to `ERROR_RESPONSES`.
+  evidence: 1.1c sets only an app-wide 422 default; the runtime already returns the envelope for 401/404/405/409, but the schema doesn't advertise them, so the generated client wouldn't type them.

@@ -3,13 +3,22 @@
 from fastapi import FastAPI
 
 from bmad_first_project.adapters.clock import SystemClock
-from bmad_first_project.adapters.http.errors import install_error_handlers
+from bmad_first_project.adapters.http.errors import (
+    ERROR_RESPONSES,
+    install_error_handlers,
+    install_openapi_error_contract,
+)
 from bmad_first_project.application.ports import Clock
 
 
 def create_app(clock: Clock | None = None) -> FastAPI:
     """Build the FastAPI application. Pass `clock` to override the system clock."""
-    app = FastAPI(title="bmad-first-project")
+    app = FastAPI(
+        title="bmad-first-project",
+        responses=ERROR_RESPONSES,
+        generate_unique_id_function=lambda route: route.name,
+    )
     app.state.clock = clock if clock is not None else SystemClock()
     install_error_handlers(app)
+    install_openapi_error_contract(app)
     return app

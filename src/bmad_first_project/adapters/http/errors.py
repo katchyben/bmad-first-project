@@ -9,10 +9,15 @@ codes, field paths or framework detail in the text. The frontend shows the
 message to the user exactly as written.
 """
 
+from typing import Any
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel
+from pydantic.json_schema import SkipJsonSchema
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from bmad_first_project.domain.errors import (
@@ -46,11 +51,16 @@ _FRAMEWORK_ERRORS: dict[int, tuple[str, str]] = {
 class ErrorBody(BaseModel):
     code: str
     message: str
-    reason: str | None = None
+    # Optional but never null on the wire, so the schema omits the null branch.
+    reason: str | SkipJsonSchema[None] = None
 
 
 class ErrorResponse(BaseModel):
     error: ErrorBody
+
+
+# Every route documents its 422 as the envelope, not FastAPI's HTTPValidationError.
+ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {422: {"model": ErrorResponse}}
 
 
 def _envelope(
@@ -102,3 +112,32 @@ def install_error_handlers(app: FastAPI) -> None:
         app.add_exception_handler(error_type, _handle_domain_error)
     app.add_exception_handler(RequestValidationError, _handle_request_validation)
     app.add_exception_handler(StarletteHTTPException, _handle_http_exception)
+
+
+def _error_schemas() -> dict[str, Any]:
+    """`ErrorResponse` and `ErrorBody` exactly as FastAPI renders them for a route.
+
+    Rendered through FastAPI rather than `pydantic.json_schema.models_json_schema`,
+    which adds `"default": null` to `reason` where FastAPI's own output does not.
+    """
+
+    def probe() -> None: ...
+
+    route = APIRoute("/", probe, responses=ERROR_RESPONSES)
+    return get_openapi(title="", version="", routes=[route])["components"]["schemas"]
+
+
+def install_openapi_error_contract(app: FastAPI) -> None:
+    """Always publish the error schemas, even before any route declares them."""
+    build_schema = app.openapi
+
+    def openapi() -> dict[str, Any]:
+        if app.openapi_schema is None:
+            schema = build_schema()
+            schemas = schema.setdefault("components", {}).setdefault("schemas", {})
+            for name, definition in _error_schemas().items():
+                schemas.setdefault(name, definition)
+            app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = openapi
