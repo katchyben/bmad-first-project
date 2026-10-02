@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
@@ -17,6 +18,14 @@ def alembic_config() -> Config:
     config.set_main_option("script_location", str(SCRIPT_LOCATION))
     config.set_main_option("path_separator", "os")
     return config
+
+
+def upgrade_to_head(url: str) -> None:
+    """Migrate the database at `url` to the Alembic head (used for scratch DBs)."""
+    config = alembic_config()
+    config.attributes["url"] = url
+    config.attributes["configure_logger"] = False
+    command.upgrade(config, "head")
 
 
 def assert_schema_current(engine: Engine) -> None:

@@ -13,7 +13,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    // Only /api is proxied; /openapi.json and /docs stay on the backend.
+    // Only /api is proxied; /docs stays on the backend. (Vite serves files in
+    // frontend/ from its root, so :5173/openapi.json is the committed schema.)
     proxy: {
       '/api': 'http://localhost:8000',
     },

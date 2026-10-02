@@ -1,14 +1,20 @@
 """CLI composition root: console commands that wire adapters to use cases."""
 
 import getpass
+import json
 import sys
+import tempfile
 from collections.abc import Callable
+from pathlib import Path
 from typing import TextIO
 
 from bmad_first_project.adapters.clock import SystemClock
 from bmad_first_project.adapters.passwords import Argon2PasswordHasher
 from bmad_first_project.adapters.persistence.engine import Engine, make_engine
-from bmad_first_project.adapters.persistence.schema import assert_schema_current
+from bmad_first_project.adapters.persistence.schema import (
+    assert_schema_current,
+    upgrade_to_head,
+)
 from bmad_first_project.adapters.persistence.unit_of_work import SqlUnitOfWork
 from bmad_first_project.application.accounts import (
     AccountChange,
@@ -96,3 +102,31 @@ def run(
 def create_account() -> None:
     """Entry point for `create-account`."""
     raise SystemExit(run())
+
+
+def render_openapi() -> str:
+    """The app's OpenAPI schema as stable JSON, built on a scratch database.
+
+    Nothing touches the configured database: a throwaway SQLite file is
+    migrated to head so `create_app()` passes its schema check.
+    """
+    # Imported here so `create-account` doesn't load the HTTP stack.
+    from bmad_first_project.main import create_app
+
+    with tempfile.TemporaryDirectory() as scratch:
+        url = f"sqlite:///{Path(scratch) / 'openapi.db'}"
+        upgrade_to_head(url)
+        engine = make_engine(url)
+        try:
+            schema = create_app(engine=engine).openapi()
+        finally:
+            engine.dispose()
+    return json.dumps(schema, indent=2, ensure_ascii=False) + "\n"
+
+
+def export_openapi() -> None:
+    """Entry point for `export-openapi <path>`: write the schema the client is built from."""
+    if len(sys.argv) != 2:
+        print("Usage: export-openapi <path to openapi.json>", file=sys.stderr)
+        raise SystemExit(2)
+    Path(sys.argv[1]).write_text(render_openapi(), encoding="utf-8")

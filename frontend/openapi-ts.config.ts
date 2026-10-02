@@ -1,9 +1,11 @@
 import { defineConfig } from '@hey-api/openapi-ts';
 
-// Generates src/client/ from the running backend's schema. Never edit
-// src/client/ by hand: change the backend, then run `npm run generate`.
+// Generates src/client/ from the committed openapi.json, which
+// `npm run generate` first re-exports from the backend offline (no server
+// needed). Never edit src/client/ by hand: change the backend, then run
+// `npm run generate`.
 export default defineConfig({
-  input: 'http://localhost:8000/openapi.json',
+  input: './openapi.json',
   output: {
     path: 'src/client',
     header: ({ defaultValue }) => [

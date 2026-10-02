@@ -21,6 +21,7 @@ dependencies = [
 
 [project.scripts]
 create-account = "bmad_first_project.cli:create_account"
+export-openapi = "bmad_first_project.cli:export_openapi"
 
 [dependency-groups]
 dev = [
