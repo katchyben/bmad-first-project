@@ -36,6 +36,24 @@ export type BodyLogin = {
 };
 
 /**
+ * CreateTaskBody
+ */
+export type CreateTaskBody = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Due At
+     */
+    due_at: string;
+};
+
+/**
  * ErrorBody
  */
 export type ErrorBody = {
@@ -59,6 +77,48 @@ export type ErrorBody = {
 export type ErrorResponse = {
     error: ErrorBody;
 };
+
+/**
+ * TaskResponse
+ */
+export type TaskResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Due At
+     */
+    due_at: string;
+    status: TaskStatus;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Finished At
+     */
+    finished_at: string | null;
+    /**
+     * Is Overdue
+     */
+    is_overdue: boolean;
+};
+
+/**
+ * TaskStatus
+ *
+ * Where a task is in its life. The value is what the database stores.
+ */
+export type TaskStatus = 'to_do' | 'in_progress' | 'done' | 'cancelled';
 
 /**
  * TokenResponse
@@ -131,3 +191,32 @@ export type LogoutResponses = {
 };
 
 export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
+
+export type CreateTaskData = {
+    body: CreateTaskBody;
+    path?: never;
+    query?: never;
+    url: '/api/tasks';
+};
+
+export type CreateTaskErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type CreateTaskError = CreateTaskErrors[keyof CreateTaskErrors];
+
+export type CreateTaskResponses = {
+    /**
+     * Successful Response
+     */
+    201: TaskResponse;
+};
+
+export type CreateTaskResponse = CreateTaskResponses[keyof CreateTaskResponses];

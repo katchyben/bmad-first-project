@@ -58,3 +58,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-6-log-in-and-out-in-the-web-app.md`
   summary: Story 1.6b — the main screen header and Log out. When logged in (document title "Today — Todo"), show `<h1>` "Today" in heading typography with today's date beneath it ("Thursday, October 1": browser time zone, `en-US`, heading-date typography, muted, 4px gap), a ghost "Log out" at the right end of the heading row (baseline-aligned) and 48px page top padding. Log out calls the generated `logoutMutation`; whatever the result (including network failure), it clears the token locally, drops all toasts (`toast.dismiss()`), clears the query cache, shows Login and focuses Username. Tests: Vitest for logout including offline; Playwright for log in → main → log out and for no horizontal scroll at 320px on both screens.
   evidence: The Story 1.6 spec came to about 2,020 tokens, and the user chose to split it. It builds on 1.6a's auth state and Login screen, and completes Story 1.6 and Epic 1.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1b-create-a-task-through-the-api.md`
+  summary: `view_task` computes `is_overdue = due_at < now` for every status; the first Epic 3 story that finishes a task must make finished (done or cancelled) tasks never overdue, as the epic context requires.
+  evidence: `domain/task.py::view_task` has no status check; unverifiable now because no task can be finished in Epic 2 (would be medium once Epic 3 lands).

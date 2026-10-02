@@ -12,7 +12,9 @@ from bmad_first_project.domain.task import (
     TITLE_TOO_LONG_MESSAGE,
     Task,
     TaskStatus,
+    TaskView,
     new_task,
+    view_task,
 )
 
 NOW = datetime(2026, 10, 1, 12, 30, 45, 123456, tzinfo=UTC)
@@ -148,3 +150,43 @@ def test_naive_now_is_a_value_error() -> None:
         new_task("Pay rent", None, TOMORROW, NOW.replace(tzinfo=None))
 
     assert not isinstance(caught.value, DomainValidationError)
+
+
+@pytest.mark.parametrize(
+    ("due_at", "is_overdue"),
+    [
+        pytest.param(NOW - timedelta(microseconds=1), True, id="one-microsecond-ago"),
+        pytest.param(NOW, False, id="exactly-now"),
+        pytest.param(TOMORROW, False, id="tomorrow"),
+    ],
+)
+def test_view_is_overdue_only_when_due_before_now(
+    due_at: datetime, is_overdue: bool
+) -> None:
+    task = Task(
+        title="Pay rent",
+        description=None,
+        due_at=due_at,
+        status=TaskStatus.TO_DO,
+        created_at=NOW,
+        id=1,
+    )
+
+    assert view_task(task, NOW) == TaskView(task=task, is_overdue=is_overdue)
+
+
+def test_view_compares_instants_across_offsets() -> None:
+    plus_two = timezone(timedelta(hours=2))
+    task = new_task("Pay rent", None, TOMORROW, NOW)
+
+    later = (TOMORROW + timedelta(microseconds=1)).astimezone(plus_two)
+
+    assert view_task(task, later).is_overdue
+    assert not view_task(task, TOMORROW.astimezone(plus_two)).is_overdue
+
+
+def test_view_is_frozen() -> None:
+    view = view_task(new_task("Pay rent", None, TOMORROW, NOW), NOW)
+
+    with pytest.raises(AttributeError):
+        view.is_overdue = True  # type: ignore[misc]

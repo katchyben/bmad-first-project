@@ -9,6 +9,7 @@ from bmad_first_project.adapters.http.errors import (
     install_error_handlers,
     install_openapi_error_contract,
 )
+from bmad_first_project.adapters.http.tasks import router as tasks_router
 from bmad_first_project.adapters.passwords import Argon2PasswordHasher
 from bmad_first_project.adapters.persistence.engine import Engine, make_engine
 from bmad_first_project.adapters.persistence.schema import assert_schema_current
@@ -42,6 +43,7 @@ def create_app(
     app.state.unit_of_work_factory = lambda: SqlUnitOfWork(engine)
     app.state.password_hasher = hasher if hasher is not None else Argon2PasswordHasher()
     app.include_router(auth_router)
+    app.include_router(tasks_router)
     install_error_handlers(app)
     install_openapi_error_contract(app)
     return app

@@ -3,8 +3,8 @@
 
 import type { UseMutationOptions } from '@tanstack/react-query';
 
-import { login, logout, type Options } from '../sdk.gen';
-import type { LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse } from '../types.gen';
+import { createTask, login, logout, type Options } from '../sdk.gen';
+import type { CreateTaskData, CreateTaskError, CreateTaskResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse } from '../types.gen';
 
 /**
  * Login
@@ -34,6 +34,25 @@ export const logoutMutation = (options?: Partial<Options<LogoutData>>): UseMutat
     const mutationOptions: UseMutationOptions<LogoutResponse, LogoutError, Options<LogoutData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await logout({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Create Task
+ *
+ * Create a To do task, due at `due_at`, and return it.
+ */
+export const createTaskMutation = (options?: Partial<Options<CreateTaskData>>): UseMutationOptions<CreateTaskResponse, CreateTaskError, Options<CreateTaskData>> => {
+    const mutationOptions: UseMutationOptions<CreateTaskResponse, CreateTaskError, Options<CreateTaskData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createTask({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

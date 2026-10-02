@@ -1,4 +1,4 @@
-"""A task: its shape, its statuses and the value rules for creating one."""
+"""A task: its shape, its statuses, the value rules for creating one and its view."""
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -88,3 +88,17 @@ def new_task(
         status=TaskStatus.TO_DO,
         created_at=now.astimezone(UTC),
     )
+
+
+@dataclass(frozen=True)
+class TaskView:
+    """A task as seen at one `now`: overdue is computed here, never stored."""
+
+    task: Task
+    is_overdue: bool
+
+
+def view_task(task: Task, now: datetime) -> TaskView:
+    """The task seen at `now`: overdue exactly when `due_at` is before `now`."""
+    _require_aware(now, "now")
+    return TaskView(task=task, is_overdue=task.due_at < now)
