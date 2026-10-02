@@ -189,6 +189,7 @@ def test_empty_or_missing_form_fields_are_a_shape_error(
 
     assert response.status_code == 422
     assert response.json() == VALIDATION_BODY
+    _assert_no_store(response)
     assert _session_rows(migrated_engine) == []
 
 

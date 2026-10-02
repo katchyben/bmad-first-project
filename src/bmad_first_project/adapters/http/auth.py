@@ -1,9 +1,12 @@
 """Auth routes: log in with the OAuth2 password form, and log out."""
 
-from typing import Annotated, Literal
+from collections.abc import Callable, Coroutine
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
@@ -32,23 +35,54 @@ class TokenResponse(BaseModel):
 NO_STORE_HEADERS = {"Cache-Control": "no-store", "Pragma": "no-cache"}
 
 
-@router.post("/token", response_model=TokenResponse, responses=error_responses(401))
+class _NoStoreRoute(APIRoute):
+    """A route whose responses (200, 401 and the request-validation 422) are no-store.
+
+    The form is validated before the route body runs, so the body alone cannot
+    reach the 422: it is rendered here by the app's own validation handler.
+    Unhandled 500s stay Starlette's plain-text response, as on every route.
+    """
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        handler = super().get_route_handler()
+
+        async def no_store_handler(request: Request) -> Response:
+            try:
+                response = await handler(request)
+            except RequestValidationError as error:
+                on_invalid = request.app.exception_handlers[RequestValidationError]
+                response = await on_invalid(request, error)
+            response.headers.update(NO_STORE_HEADERS)
+            return response
+
+        return no_store_handler
+
+
 def login(
     form: Annotated[OAuth2PasswordRequestForm, Depends()],
     uow: UnitOfWorkDep,
     hasher: PasswordHasherDep,
     now: NowDep,
-    response: Response,
 ) -> TokenResponse | JSONResponse:
     """Start a session. The token is returned here and nowhere else."""
     try:
         token = auth.login(uow, hasher, now, form.username, form.password)
     except UnauthenticatedError as error:
-        # Returned, not raised, so the 401 carries the no-store headers too.
-        # Login writes nothing before refusing, so there is nothing to roll back.
-        return domain_error_response(error, NO_STORE_HEADERS)
-    response.headers.update(NO_STORE_HEADERS)
+        # Returned, not raised: login writes nothing before refusing, so there is
+        # nothing to roll back, and the response keeps its WWW-Authenticate header.
+        return domain_error_response(error)
     return TokenResponse(access_token=token)
+
+
+# Registered directly: the `post` decorator takes no route class.
+router.add_api_route(
+    "/token",
+    login,
+    methods=["POST"],
+    response_model=TokenResponse,
+    responses=error_responses(401),
+    route_class_override=_NoStoreRoute,
+)
 
 
 @router.post(

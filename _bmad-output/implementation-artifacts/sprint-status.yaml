@@ -67,14 +67,14 @@ action_items:
     action: "Send Cache-Control: no-store and Pragma: no-cache on every POST /api/auth/token
       response, including the request-validation 422"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
   - id: "epic-1-retro-item-2-make-the-422-login-test-use-the-backend"
     epic: 1
     action: "Make the 422 login test use the backend real validation message and add
       an e2e for an empty Login submit"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
   - id: "epic-1-retro-item-3-reconcile-epics-md-stories-1-2-1-4-and-a"
     epic: 1

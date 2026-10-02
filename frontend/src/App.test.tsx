@@ -205,7 +205,8 @@ describe('invalid login', () => {
   });
 
   it('an empty submit answered by a 422 shows the message, keeps the password and focus', async () => {
-    const message = 'Check the highlighted fields and try again.';
+    // The backend's VALIDATION_MESSAGE (adapters/http/errors.py).
+    const message = "Some details aren't valid. Check them and try again.";
     fetchMock.mockImplementation(async () =>
       json(422, { error: { code: 'validation_error', message } }),
     );

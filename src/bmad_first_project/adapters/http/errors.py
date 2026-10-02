@@ -83,10 +83,8 @@ def _envelope(
     )
 
 
-def domain_error_response(
-    exc: DomainError, extra_headers: dict[str, str] | None = None
-) -> JSONResponse:
-    """The envelope response for a domain error, plus any `extra_headers`."""
+def domain_error_response(exc: DomainError) -> JSONResponse:
+    """The envelope response for a domain error."""
     status_code, code = next(
         mapping
         for error_type, mapping in _DOMAIN_ERRORS.items()
@@ -94,10 +92,11 @@ def domain_error_response(
     )
     reason = (exc.reason or None) if isinstance(exc, StateConflictError) else None
     headers = (
-        {"WWW-Authenticate": "Bearer"} if isinstance(exc, UnauthenticatedError) else {}
+        {"WWW-Authenticate": "Bearer"}
+        if isinstance(exc, UnauthenticatedError)
+        else None
     )
-    headers.update(extra_headers or {})
-    return _envelope(status_code, code, exc.message, reason, headers or None)
+    return _envelope(status_code, code, exc.message, reason, headers)
 
 
 async def _handle_domain_error(_: Request, exc: Exception) -> JSONResponse:

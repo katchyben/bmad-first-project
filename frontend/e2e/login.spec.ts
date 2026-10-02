@@ -3,6 +3,8 @@ import { E2E_PASSWORD, E2E_USERNAME } from './credentials';
 
 const TOKEN_KEY = 'todo.auth_token';
 const INVALID = "That username and password don't match.";
+// The backend's VALIDATION_MESSAGE (adapters/http/errors.py).
+const VALIDATION = "Some details aren't valid. Check them and try again.";
 
 const username = (page: Page) => page.getByLabel('Username');
 const password = (page: Page) => page.getByLabel('Password');
@@ -48,6 +50,27 @@ test('invalid credentials keep the username, clear and focus the password', asyn
   await expect(username(page)).toHaveValue(E2E_USERNAME);
   await expect(password(page)).toHaveValue('');
   await expect(password(page)).toBeFocused();
+  for (const field of [username(page), password(page)]) {
+    await expect(field).toHaveAttribute('aria-invalid', 'true');
+    await expect(field).toHaveAttribute('aria-describedby', (await alert.getAttribute('id'))!);
+  }
+  expect(await page.evaluate((key) => localStorage.getItem(key), TOKEN_KEY)).toBeNull();
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
+});
+
+test('empty submit: the backend 422 message shows inline, nothing is stored', async ({ page }) => {
+  await page.goto('/');
+  await expect(username(page)).toBeFocused();
+  const responsePromise = page.waitForResponse((r) => r.url().endsWith('/api/auth/token'));
+  await logInButton(page).click();
+
+  const response = await responsePromise;
+  expect(response.status()).toBe(422);
+  expect(response.headers()['cache-control']).toBe('no-store');
+  expect(response.headers()['pragma']).toBe('no-cache');
+  const alert = page.getByRole('alert');
+  await expect(alert).toHaveText(VALIDATION);
+  await expect(page).toHaveTitle('Log in — Todo');
   for (const field of [username(page), password(page)]) {
     await expect(field).toHaveAttribute('aria-invalid', 'true');
     await expect(field).toHaveAttribute('aria-describedby', (await alert.getAttribute('id'))!);
