@@ -79,6 +79,35 @@
 
   /* Minimum interactive target (`h-min-target`, `size-min-target`, ...). */
   --spacing-min-target: var(--min-target);
+
+  /* Still Water spacing (DESIGN.md `spacing`): `px-row-padding-x`, `gap-row-gap`, ... */
+  --spacing-heading-to-filter: 26px;
+  --spacing-row-padding-y: 16px;
+  --spacing-row-padding-x: 22px;
+  --spacing-row-gap: 12px;
+  --spacing-row-min-height: 58px;
+  --spacing-status-mark: 18px;
+  --spacing-empty-padding-y: 64px;
+  --spacing-empty-padding-x: 24px;
+  --spacing-empty-ring: 44px;
+
+  /*
+   * Type roles (DESIGN.md `typography`): `text-row-title`, `text-row-meta`, ...
+   * Combine these with colour classes by plain concatenation, not `cn()`:
+   * tailwind-merge does not know them and would drop one as a colour clash.
+   */
+  --text-row-title: 16px;
+  --text-row-title--line-height: 1.5;
+  --text-row-meta: 13px;
+  --text-row-meta--line-height: 1.5;
+  --text-overdue-label: 13px;
+  --text-overdue-label--line-height: 1.5;
+  --text-overdue-label--font-weight: 600;
+  --text-empty-title: 18px;
+  --text-empty-title--line-height: 1.5;
+  --text-empty-title--font-weight: 300;
+  --text-caption: 13px;
+  --text-caption--line-height: 1.5;
 }
 
 :root {

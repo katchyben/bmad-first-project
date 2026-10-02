@@ -7,6 +7,7 @@ import { client, configureClient } from '@/api/client';
 import { createQueryClient } from '@/api/queryClient';
 import { getToken, setToken } from '@/api/token';
 import App from '@/App';
+import { answerOthersWith, isTasksRequest } from '@/tasks/testHarness';
 import { formatHeadingDate } from './MainScreen';
 
 declare global {
@@ -82,6 +83,7 @@ beforeEach(() => {
   document.title = '';
   stubMatchMedia();
   fetchMock = vi.fn<(request: Request) => Promise<Response>>();
+  answerOthersWith(fetchMock, () => Promise.reject(new Error('unexpected request')));
   configureClient(ORIGIN);
   client.setConfig({ fetch: fetchMock as unknown as typeof fetch });
   queryClient = createQueryClient();
@@ -127,10 +129,25 @@ describe('main screen', () => {
   });
 });
 
+describe('task list', () => {
+  it('loads the tasks once and shows them below the header', async () => {
+    await renderApp();
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('Nothing due. Enjoy the quiet.'),
+    );
+    const tasksRequests = fetchMock.mock.calls.filter(([r]) => isTasksRequest(r));
+    expect(tasksRequests).toHaveLength(1);
+    expect(tasksRequests[0][0].method).toBe('GET');
+    expect(tasksRequests[0][0].headers.get('Authorization')).toBe('Bearer stored');
+    const header = document.querySelector('main > header')!;
+    expect(header.nextElementSibling?.textContent).toContain('Nothing due. Enjoy the quiet.');
+  });
+});
+
 describe('log out', () => {
   it('ends the session at once and revokes it with the old token', async () => {
     let release: () => void = () => {};
-    fetchMock.mockImplementation(
+    answerOthersWith(fetchMock, 
       () =>
         new Promise((resolve) => {
           release = () => resolve(new Response(null, { status: 204 }));
@@ -164,7 +181,7 @@ describe('log out', () => {
     ],
   ])('still ends the session on %s, with no error toast', async (_label, answer) => {
     const errorToast = vi.spyOn(toast, 'error');
-    fetchMock.mockImplementation(answer);
+    answerOthersWith(fetchMock, answer);
     await renderApp();
 
     await clickLogOut();
@@ -181,7 +198,7 @@ describe('log out', () => {
   });
 
   it('does not wait for a server that never answers', async () => {
-    fetchMock.mockImplementation(() => new Promise(() => {}));
+    answerOthersWith(fetchMock, () => new Promise(() => {}));
     await renderApp();
 
     await clickLogOut();

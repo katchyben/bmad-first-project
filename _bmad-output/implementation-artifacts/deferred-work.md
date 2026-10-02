@@ -70,3 +70,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-4-delete-a-task-through-the-api.md`
   summary: `delete_task` checks To do on a read, then deletes by ID only, so a concurrent start or finish between the two could still delete a task that is no longer To do.
   evidence: the same read-then-write class as the 2.3 entry. Unverified under real concurrency (a single user on SQLite); handle it with that entry's optimistic guard when Epic 3 adds status actions.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-5a-show-my-tasks-on-the-main-screen.md`
+  summary: `frontend/src/tasks/overdue.ts::isShownOverdue` trusts a server `is_overdue: true` before checking status, so with the 2.1b server gap a finished past-due task would render overdue. Fix both sides together when Epic 3 makes tasks finishable (finished is never overdue).
+  evidence: `isShownOverdue` returns early on `task.is_overdue`. This pairs with the 2.1b `view_task` entry. Unreachable until Epic 3.

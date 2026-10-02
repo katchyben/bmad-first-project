@@ -7,6 +7,8 @@ import { client, configureClient } from '@/api/client';
 import { FALLBACK_MESSAGE } from '@/api/errors';
 import { createQueryClient } from '@/api/queryClient';
 import { TOKEN_KEY, getToken, setToken } from '@/api/token';
+import { listTasksQueryKey } from '@/client/@tanstack/react-query.gen';
+import { answerOthersWith } from '@/tasks/testHarness';
 import App from './App';
 
 declare global {
@@ -97,6 +99,7 @@ beforeEach(() => {
   fetchMock = vi.fn<(request: Request) => Promise<Response>>();
   configureClient(ORIGIN);
   client.setConfig({ fetch: fetchMock as unknown as typeof fetch });
+  answerOthersWith(fetchMock, () => Promise.reject(new Error('unexpected request')));
   queryClient = createQueryClient();
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -142,7 +145,7 @@ describe('valid login', () => {
   it('is aria-disabled while pending, then stores the token and shows the logged-in view', async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => (release = resolve));
-    fetchMock.mockImplementation(async () => {
+    answerOthersWith(fetchMock, async () => {
       await gate;
       return tokenResponse();
     });
@@ -241,7 +244,7 @@ describe('double submit', () => {
   it('sends one request for two quick submits', async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => (release = resolve));
-    fetchMock.mockImplementation(async () => {
+    answerOthersWith(fetchMock, async () => {
       await gate;
       return tokenResponse();
     });
@@ -334,8 +337,9 @@ describe('token rejected', () => {
       toast('Something earlier.');
     });
     await vi.waitFor(() => expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(1));
-    queryClient.setQueryData(['tasks'], ['old']);
+    queryClient.setQueryData(listTasksQueryKey(), []);
 
+    const before = fetchMock.mock.calls.length;
     fetchMock.mockImplementation(async () =>
       json(401, { error: { code: 'unauthenticated', message: 'Log in again.' } }),
     );
@@ -348,9 +352,9 @@ describe('token rejected', () => {
     expect(document.title).toBe('Log in — Todo');
     expect(document.activeElement).toBe(username());
     expect(alertSlot()!.textContent).toBe('');
-    expect(queryClient.getQueryData(['tasks'])).toBeUndefined();
+    expect(queryClient.getQueryData(listTasksQueryKey())).toBeUndefined();
     await vi.waitFor(() => expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(0));
     // Nothing is replayed.
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(before + 1);
   });
 });
