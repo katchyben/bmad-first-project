@@ -28,13 +28,17 @@ export function createQueryClient(): QueryClient {
       },
     }),
     defaultOptions: {
+      // Always send: the browser's online flag must not pause a request (the
+      // banner would never show) or queue a mutation to replay on reconnect.
       queries: {
+        networkMode: 'always',
         retry: shouldRetryQuery,
         retryDelay,
         refetchOnReconnect: true,
         refetchOnWindowFocus: true,
       },
       mutations: {
+        networkMode: 'always',
         retry: false,
       },
     },

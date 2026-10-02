@@ -23,7 +23,8 @@ export class NetworkError extends Error {
   }
 }
 
-const GATEWAY_STATUSES = new Set([502, 503, 504]);
+/** Gateway statuses: the proxy answered, but the backend behind it did not. */
+export const GATEWAY_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
 
 /**
  * True when the server is unreachable: a network failure, or a gateway error

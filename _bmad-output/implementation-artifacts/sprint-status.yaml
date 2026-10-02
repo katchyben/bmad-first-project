@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-01-2026 16:41
-last_updated: 10-02-2026 16:00
+last_updated: 10-02-2026 16:45
 project: bmad-first-project
 project_key: NOKEY
 tracking_system: file-system
@@ -54,7 +54,7 @@ development_status:
   2-5b-add-a-task-from-the-main-screen: done
   2-5c-pick-any-due-date-time: done
   2-5d-move-through-my-tasks-with-the-keyboard: done
-  2-5e-know-when-the-server-can-t-be-reached: backlog
+  2-5e-know-when-the-server-can-t-be-reached: done
   2-6a-edit-a-task-in-place: backlog
   2-6b-delete-a-task-with-an-inline-confirm: backlog
   epic-2-retrospective: optional
@@ -94,7 +94,9 @@ action_items:
     action: "Story 2.5: render the connection banner on the Login screen too, so a
       login while the server is unreachable gives feedback"
     owner: "dev (Story 2.5e)"
-    status: open
+    status: done
+    resolution: "2026-10-02: Story 2.5e shows the connection banner above the login
+      card; the next login that reaches the server clears it"
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
   - id: "epic-1-retro-item-5-epic-2-first-protected-query-e2e-where-a"
     epic: 1

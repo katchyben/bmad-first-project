@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client, configureClient, setOnUnauthenticated } from './client';
+import { getUnreachable, setUnreachable } from './connection';
 import { FALLBACK_MESSAGE, NetworkError, ServerError, errorMessage } from './errors';
 import { TOKEN_KEY, getToken, setToken } from './token';
 
@@ -30,6 +31,7 @@ beforeEach(() => {
 
 afterEach(() => {
   setOnUnauthenticated(() => {});
+  setUnreachable(false);
 });
 
 describe('base URL', () => {
@@ -167,5 +169,43 @@ describe('error shapes', () => {
     const result = await client.get({ url: '/api/tasks' });
     expect(result.error).toBeInstanceOf(NetworkError);
     expect((result.error as NetworkError).cause).toBe(cause);
+  });
+});
+
+describe('reachability', () => {
+  it('marks the server unreachable when fetch rejects', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+    await client.get({ url: '/api/tasks' });
+    expect(getUnreachable()).toBe(true);
+  });
+
+  it.each([502, 503, 504])('marks the server unreachable on a %i', async (status) => {
+    fetchMock.mockResolvedValue(json(status, 'Bad Gateway'));
+    await client.get({ url: '/api/tasks' });
+    expect(getUnreachable()).toBe(true);
+  });
+
+  it.each([200, 401, 422, 500])('marks the server reachable again on a %i', async (status) => {
+    setUnreachable(true);
+    fetchMock.mockResolvedValue(json(status, { error: { code: 'x', message: 'y' } }));
+    await client.post({ url: '/api/auth/token', body: {} });
+    expect(getUnreachable()).toBe(false);
+  });
+
+  it('leaves the state alone for a rejection that is not a network failure', async () => {
+    setUnreachable(true);
+    fetchMock.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+    await client.get({ url: '/api/tasks' });
+    expect(getUnreachable()).toBe(true);
+  });
+
+  it('keeps the 401 handling when it also marks the server reachable', async () => {
+    setUnreachable(true);
+    setToken('stale');
+    fetchMock.mockResolvedValue(json(401, UNAUTHENTICATED));
+    await client.get({ url: '/api/tasks' });
+    expect(getUnreachable()).toBe(false);
+    expect(getToken()).toBeNull();
+    expect(hook).toHaveBeenCalledTimes(1);
   });
 });

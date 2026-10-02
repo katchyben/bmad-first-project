@@ -4,12 +4,14 @@ import { createRoot, type Root } from 'react-dom/client';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client, configureClient } from '@/api/client';
+import { getUnreachable, setUnreachable } from '@/api/connection';
 import { FALLBACK_MESSAGE } from '@/api/errors';
 import { createQueryClient } from '@/api/queryClient';
 import { TOKEN_KEY, getToken, setToken } from '@/api/token';
 import { listTasksQueryKey } from '@/client/@tanstack/react-query.gen';
 import { answerOthersWith } from '@/tasks/testHarness';
 import App from './App';
+import { BANNER_TEXT, RECONNECTED } from './components/ConnectionBanner';
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -111,6 +113,7 @@ afterEach(async () => {
   act(() => root.unmount());
   container.remove();
   queryClient.clear();
+  setUnreachable(false);
 });
 
 describe('no token', () => {
@@ -205,6 +208,7 @@ describe('invalid login', () => {
     expect(password()!.hasAttribute('aria-invalid')).toBe(false);
     await vi.waitFor(() => expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(1));
     expect(document.querySelector('[data-sonner-toast]')!.textContent).toContain(FALLBACK_MESSAGE);
+    expect(document.querySelector('[data-testid="connection-banner"]')).toBeNull();
   });
 
   it('an empty submit answered by a 422 shows the message, keeps the password and focus', async () => {
@@ -356,5 +360,102 @@ describe('token rejected', () => {
     await vi.waitFor(() => expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(0));
     // Nothing is replayed.
     expect(fetchMock).toHaveBeenCalledTimes(before + 1);
+  });
+});
+
+describe('server unreachable on Login', () => {
+  const banner = () => document.querySelector<HTMLElement>('[data-testid="connection-banner"]');
+  const announcer = () => document.querySelector('[data-testid="announcer"]')!;
+
+  function recordAnnouncements(): string[] {
+    const seen: string[] = [];
+    new MutationObserver(() => {
+      const text = announcer().textContent ?? '';
+      if (text !== '') seen.push(text);
+    }).observe(announcer(), { childList: true, subtree: true, characterData: true });
+    return seen;
+  }
+
+  const outages: [string, () => Promise<Response>][] = [
+    ['a network failure', () => Promise.reject(new TypeError('Failed to fetch'))],
+    ['a 502', async () => json(502, 'Bad Gateway')],
+  ];
+
+  it.each(outages)(
+    '%s shows the banner above the card, keeps the fields and leaves the slot empty',
+    async (_label, outage) => {
+      fetchMock.mockImplementation(outage);
+      await renderApp();
+      const seen = recordAnnouncements();
+      await fillAndSubmit('benny', 'secret');
+
+      await vi.waitFor(() => expect(banner()?.textContent).toBe(BANNER_TEXT));
+      const card = document.querySelector('main')!;
+      expect(banner()!.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(card.contains(banner())).toBe(false);
+      await vi.waitFor(() => expect(loginButton()!.hasAttribute('aria-disabled')).toBe(false));
+      expect(username()!.value).toBe('benny');
+      expect(password()!.value).toBe('secret');
+      expect(alertSlot()!.textContent).toBe('');
+      expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(0);
+      expect(seen).toEqual([BANNER_TEXT]);
+      // Login has no query to retry, and the mutation is never retried.
+      expect(loginRequests()).toHaveLength(1);
+    },
+  );
+
+  it('the next login that gets a 401 clears the banner, announces it, and shows the message', async () => {
+    fetchMock.mockImplementation(() => Promise.reject(new TypeError('Failed to fetch')));
+    await renderApp();
+    const seen = recordAnnouncements();
+    await fillAndSubmit('benny', 'wrong');
+    await vi.waitFor(() => expect(banner()).not.toBeNull());
+
+    fetchMock.mockImplementation(async () => invalidResponse());
+    await type(password()!, 'wrong');
+    await submit();
+
+    await vi.waitFor(() => expect(alertSlot()?.textContent).toBe(INVALID));
+    expect(banner()).toBeNull();
+    expect(seen).toEqual([BANNER_TEXT, RECONNECTED]);
+    expect(username()!.value).toBe('benny');
+    expect(password()!.value).toBe('');
+  });
+
+  it('the next login that gets a 200 clears the banner and shows the main screen', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(json(502, 'Bad Gateway')));
+    await renderApp();
+    const seen = recordAnnouncements();
+    await fillAndSubmit('benny', 'secret');
+    await vi.waitFor(() => expect(banner()).not.toBeNull());
+
+    answerOthersWith(fetchMock, async () => tokenResponse());
+    await submit();
+
+    await vi.waitFor(() => expect(document.title).toBe('Today — Todo'));
+    expect(banner()).toBeNull();
+    expect(seen.slice(0, 2)).toEqual([BANNER_TEXT, RECONNECTED]);
+  });
+
+  it('outlives a token change: logging out neither shows nor clears it', async () => {
+    setToken('stored');
+    await renderApp();
+    // Let the list load (a reachable answer) before the server goes away.
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Nothing due.'));
+    fetchMock.mockImplementation(() => Promise.reject(new TypeError('Failed to fetch')));
+    await act(async () => setUnreachable(true));
+    // The banner's one refetch of the list fails too.
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([r]) => r.method === 'GET')).toHaveLength(2),
+    );
+    expect(banner()).not.toBeNull();
+
+    await act(async () => {
+      localStorage.removeItem(TOKEN_KEY);
+      window.dispatchEvent(new StorageEvent('storage', { key: TOKEN_KEY }));
+    });
+    expect(username()).not.toBeNull();
+    expect(banner()?.textContent).toBe(BANNER_TEXT);
+    expect(getUnreachable()).toBe(true);
   });
 });

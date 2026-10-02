@@ -1,5 +1,6 @@
 import { client } from '../client/client.gen';
-import { NetworkError, ServerError } from './errors';
+import { setUnreachable } from './connection';
+import { GATEWAY_STATUSES, NetworkError, ServerError } from './errors';
 import { clearToken, getToken } from './token';
 
 // The one place the generated client is configured. Nothing else may set its
@@ -39,6 +40,10 @@ export function configureClient(baseUrl: string = window.location.origin): typeo
   });
 
   client.interceptors.response.use((response, request) => {
+    // Every response reports reachability: a gateway status means the backend
+    // behind the proxy is down; anything else (2xx, 4xx, 500) proves it is up.
+    setUnreachable(GATEWAY_STATUSES.has(response.status));
+
     // Act only on a 401 that answers the token we hold now: not a request sent
     // without a token, a second concurrent 401, or a stale token after re-login.
     const token = getToken();
@@ -56,6 +61,7 @@ export function configureClient(baseUrl: string = window.location.origin): typeo
 
   client.interceptors.error.use((error, response, request) => {
     if (request !== undefined && response === undefined && error instanceof TypeError) {
+      setUnreachable(true);
       return new NetworkError(error);
     }
     if (response !== undefined && response.status >= 500) {

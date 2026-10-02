@@ -38,7 +38,8 @@ export function LoginScreen({ onLoggedIn }: Props) {
     ...loginMutation(),
     onSuccess: (data) => onLoggedIn(data.access_token),
     onError: (failure) => {
-      // 5xx and network failures keep the fields; the global toast or retry rules apply.
+      // 5xx and unreachable failures keep the fields and leave the slot empty:
+      // a 5xx goes to the global toast, an unreachable server to the connection banner.
       if (!isEnvelopeError(failure)) return;
       setError(errorMessage(failure));
       if (errorCode(failure) === 'unauthenticated') {
@@ -63,7 +64,7 @@ export function LoginScreen({ onLoggedIn }: Props) {
   const invalid = error !== null;
 
   return (
-    <main className="flex min-h-dvh items-center justify-center py-12">
+    <main className="flex flex-1 items-center justify-center py-12">
       <div className="w-full max-w-[360px] rounded-lg border border-border bg-card p-8 text-card-foreground">
         <h1 className="mb-6 text-[32px] leading-[1.2] font-light tracking-[-0.02em]">Todo App</h1>
         <form noValidate onSubmit={submit}>

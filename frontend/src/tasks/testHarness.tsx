@@ -3,6 +3,7 @@ import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { vi } from 'vitest';
 import { client, configureClient } from '@/api/client';
+import { setUnreachable } from '@/api/connection';
 import { createQueryClient } from '@/api/queryClient';
 import type { TaskResponse } from '@/client/types.gen';
 
@@ -41,6 +42,8 @@ export function createHarness(): Harness {
       act(() => root.unmount());
       container.remove();
       queryClient.clear();
+      // The connection state is module-global; don't leak it into the next test.
+      setUnreachable(false);
     },
   };
 }

@@ -1,12 +1,14 @@
-import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import { onlineManager, QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client, configureClient } from '@/api/client';
+import { setUnreachable } from '@/api/connection';
 import { createQueryClient } from '@/api/queryClient';
 import { getToken, setToken } from '@/api/token';
 import App from '@/App';
+import { BANNER_TEXT, RECONNECTED } from '@/components/ConnectionBanner';
 import { answerOthersWith, isTasksRequest, jsonResponse, task } from '@/tasks/testHarness';
 import { formatHeadingDate } from './MainScreen';
 
@@ -98,6 +100,9 @@ afterEach(async () => {
   act(() => root.unmount());
   container.remove();
   queryClient.clear();
+  setUnreachable(false);
+  onlineManager.setOnline(true);
+  vi.useRealTimers();
 });
 
 describe('heading date', () => {
@@ -348,5 +353,187 @@ describe('log out', () => {
 
     await clickLogOut();
     await expectLoggedOut();
+  });
+});
+
+describe('server unreachable', () => {
+  const banner = () => document.querySelector<HTMLElement>('[data-testid="connection-banner"]');
+  const announcer = () => document.querySelector('[data-testid="announcer"]')!;
+  const toasts = () => document.querySelectorAll('[data-sonner-toast]');
+  const tasksGets = () =>
+    fetchMock.mock.calls.filter(([r]) => r.method === 'GET' && isTasksRequest(r));
+  const posts = () =>
+    fetchMock.mock.calls.filter(([r]) => r.method === 'POST' && isTasksRequest(r));
+  const titleInput = () => document.querySelector<HTMLInputElement>('input[name="title"]')!;
+  // Rejects on the next timer tick, so a test can start recording announcements first.
+  const offline = () =>
+    new Promise<Response>((_, reject) =>
+      setTimeout(() => reject(new TypeError('Failed to fetch')), 0),
+    );
+
+  /** Every non-empty text the announcer shows, in order. */
+  function recordAnnouncements(): string[] {
+    const seen: string[] = [];
+    new MutationObserver(() => {
+      const text = announcer().textContent ?? '';
+      if (text !== '') seen.push(text);
+    }).observe(announcer(), { childList: true, subtree: true, characterData: true });
+    return seen;
+  }
+
+  async function advance(ms: number): Promise<void> {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  }
+
+  it('a failing list load shows the banner once, keeps retrying, and clears on recovery', async () => {
+    vi.useFakeTimers();
+    let failures = 0;
+    // The first load is held until announcements are being recorded; then it and
+    // three retries fail at once, so the retries land exactly on the back-off.
+    let failFirst!: () => void;
+    fetchMock.mockImplementation((r) => {
+      if (!isTasksRequest(r)) return Promise.reject(new Error('unexpected request'));
+      // The first load and three retries fail; the fourth retry gets through.
+      if (failures < 4) {
+        failures += 1;
+        if (failures === 1) {
+          return new Promise<Response>(
+            (_, reject) => (failFirst = () => reject(new TypeError('Failed to fetch'))),
+          );
+        }
+        return Promise.reject(new TypeError('Failed to fetch'));
+      }
+      return Promise.resolve(jsonResponse([task({ title: 'Back again' })]));
+    });
+    await renderApp();
+    const seen = recordAnnouncements();
+    await act(async () => failFirst());
+    await advance(0);
+
+    expect(banner()?.textContent).toBe(BANNER_TEXT);
+    // The banner sits above the column, outside it.
+    const column = document.querySelector('[data-testid="shell-column"]')!;
+    expect(column.contains(banner())).toBe(false);
+    expect(banner()!.compareDocumentPosition(column) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tasksGets()).toHaveLength(1);
+
+    // Three retries, on the back-off, all failing: one announcement in total.
+    // retryDelay(failureCount) with failureCount from 0: 1 s, 2 s, 4 s, then 8 s.
+    await advance(1_000);
+    expect(tasksGets()).toHaveLength(2);
+    await advance(2_000);
+    expect(tasksGets()).toHaveLength(3);
+    await advance(4_000);
+    expect(tasksGets()).toHaveLength(4);
+    expect(banner()).not.toBeNull();
+    expect(seen).toEqual([BANNER_TEXT]);
+    // The Loading… line stays hidden while unreachable, and nothing is toasted.
+    expect(document.body.textContent).not.toContain('Loading…');
+    expect(toasts()).toHaveLength(0);
+
+    await advance(8_000);
+    expect(tasksGets()).toHaveLength(5);
+    // Let the answer's body be read and rendered.
+    await advance(10);
+    expect(banner()).toBeNull();
+    expect(seen).toEqual([BANNER_TEXT, RECONNECTED]);
+    expect(document.body.textContent).toContain('Back again');
+    // "Reconnected." is announced only, never shown.
+    expect(document.body.textContent!.replace(announcer().textContent!, '')).not.toContain(
+      RECONNECTED,
+    );
+    expect(toasts()).toHaveLength(0);
+  });
+
+  it.each([
+    ['a 502', () => Promise.resolve(jsonResponse('Bad Gateway', 502))],
+    ['a network failure', offline],
+  ])(
+    'an add that gets %s shows the banner, keeps the title, refetches once, never retries',
+    async (_label, failure) => {
+      vi.useFakeTimers();
+      fetchMock.mockImplementation(() =>
+        Promise.resolve(jsonResponse([task({ title: 'Cached task' })])),
+      );
+      await renderApp();
+      await advance(0);
+      expect(document.body.textContent).toContain('Cached task');
+      expect(tasksGets()).toHaveLength(1);
+
+      // The server goes away.
+      fetchMock.mockImplementation(failure);
+      const seen = recordAnnouncements();
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      await act(async () => {
+        setValue.call(titleInput(), 'Kept title');
+        titleInput().dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await act(async () => {
+        titleInput().dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+        );
+      });
+      await advance(0);
+
+      expect(posts()).toHaveLength(1);
+      expect(banner()?.textContent).toBe(BANNER_TEXT);
+      expect(seen).toEqual([BANNER_TEXT]);
+      // The active list query was refetched once, and its own retry loop takes over.
+      expect(tasksGets()).toHaveLength(2);
+      expect(titleInput().value).toBe('Kept title');
+      expect(document.querySelector('[role="alert"]')!.textContent).toBe('');
+      expect(document.body.textContent).toContain('Cached task');
+      expect(toasts()).toHaveLength(0);
+
+      // The server comes back: the list's retry clears the banner. The add is not replayed.
+      fetchMock.mockImplementation(() =>
+        Promise.resolve(jsonResponse([task({ title: 'Cached task' })])),
+      );
+      await advance(30_000);
+      expect(banner()).toBeNull();
+      expect(seen).toEqual([BANNER_TEXT, RECONNECTED]);
+      expect(posts()).toHaveLength(1);
+      expect(titleInput().value).toBe('Kept title');
+    },
+  );
+
+  it('while the browser says offline, an add is still sent, shows the banner and is never replayed', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse([])));
+    await renderApp();
+    await advance(0);
+
+    fetchMock.mockImplementation(offline);
+    await act(async () => onlineManager.setOnline(false));
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => {
+      setValue.call(titleInput(), 'Offline add');
+      titleInput().dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      titleInput().dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+      );
+    });
+    await advance(0);
+    expect(posts()).toHaveLength(1);
+    expect(banner()?.textContent).toBe(BANNER_TEXT);
+
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse([])));
+    await act(async () => onlineManager.setOnline(true));
+    await advance(30_000);
+    expect(posts()).toHaveLength(1);
+    expect(banner()).toBeNull();
+    expect(titleInput().value).toBe('Offline add');
+  });
+
+  it('a plain 500 shows the error toast and no banner', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse('boom', 500)));
+    await renderApp();
+    await vi.waitFor(() => expect(toasts()).toHaveLength(1));
+    expect(banner()).toBeNull();
+    expect(tasksGets()).toHaveLength(1);
   });
 });
