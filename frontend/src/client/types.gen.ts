@@ -54,6 +54,24 @@ export type CreateTaskBody = {
 };
 
 /**
+ * EditTaskBody
+ */
+export type EditTaskBody = {
+    /**
+     * Title
+     */
+    title?: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Due At
+     */
+    due_at?: string;
+};
+
+/**
  * ErrorBody
  */
 export type ErrorBody = {
@@ -289,3 +307,45 @@ export type GetTaskResponses = {
 };
 
 export type GetTaskResponse = GetTaskResponses[keyof GetTaskResponses];
+
+export type EditTaskData = {
+    body: EditTaskBody;
+    path: {
+        /**
+         * Task Id
+         */
+        task_id: number;
+    };
+    query?: never;
+    url: '/api/tasks/{task_id}';
+};
+
+export type EditTaskErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type EditTaskError = EditTaskErrors[keyof EditTaskErrors];
+
+export type EditTaskResponses = {
+    /**
+     * Successful Response
+     */
+    200: TaskResponse;
+};
+
+export type EditTaskResponse = EditTaskResponses[keyof EditTaskResponses];

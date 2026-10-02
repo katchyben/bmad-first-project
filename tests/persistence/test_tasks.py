@@ -155,6 +155,60 @@ def test_list_returns_every_stored_task(migrated_engine: Engine) -> None:
     assert all(task.due_at.tzinfo is UTC for task in listed)
 
 
+def test_save_writes_the_whole_task_by_its_id(migrated_engine: Engine) -> None:
+    with SqlUnitOfWork(migrated_engine) as uow:
+        kept = uow.tasks.add(_task("Kept"))
+        added = uow.tasks.add(_task())
+    assert added.id is not None and kept.id is not None
+    changed = replace(
+        added,
+        title="Pay rent by card",
+        description=None,
+        due_at=(NOW + timedelta(days=3)).astimezone(PLUS_TWO),
+        status=TaskStatus.DONE,
+        created_at=NOW - timedelta(days=1),
+        finished_at=NOW + timedelta(hours=1),
+        previous_status=TaskStatus.IN_PROGRESS,
+    )
+
+    with SqlUnitOfWork(migrated_engine) as uow:
+        uow.tasks.save(changed)
+
+    with SqlUnitOfWork(migrated_engine) as uow:
+        stored = uow.tasks.get(added.id)
+        assert uow.tasks.get(kept.id) == kept
+
+    assert stored == changed
+    assert stored is not None and stored.due_at.tzinfo is UTC
+    assert _count(migrated_engine) == 2
+
+
+def test_a_rolled_back_save_changes_nothing(migrated_engine: Engine) -> None:
+    class Boom(Exception):
+        pass
+
+    with SqlUnitOfWork(migrated_engine) as uow:
+        added = uow.tasks.add(_task())
+    assert added.id is not None
+
+    with pytest.raises(Boom), SqlUnitOfWork(migrated_engine) as uow:
+        uow.tasks.save(replace(added, title="Changed"))
+        raise Boom
+
+    with SqlUnitOfWork(migrated_engine) as uow:
+        assert uow.tasks.get(added.id) == added
+
+
+@pytest.mark.parametrize("task_id", [None, 999])
+def test_save_of_an_unstored_task_is_a_lookup_error(
+    migrated_engine: Engine, task_id: int | None
+) -> None:
+    with pytest.raises(LookupError), SqlUnitOfWork(migrated_engine) as uow:
+        uow.tasks.save(replace(_task(), id=task_id))
+
+    assert _count(migrated_engine) == 0
+
+
 def test_rollback_stores_nothing(migrated_engine: Engine) -> None:
     class Boom(Exception):
         pass

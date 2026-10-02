@@ -1,4 +1,5 @@
-"""`create_task`, `list_tasks` and `get_task` against an in-memory unit of work."""
+"""`create_task`, `list_tasks`, `get_task` and `edit_task` against an in-memory unit
+of work."""
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -7,9 +8,20 @@ from typing import Self
 
 import pytest
 
-from bmad_first_project.application.tasks import create_task, get_task, list_tasks
-from bmad_first_project.domain.errors import DomainValidationError, NotFoundError
+from bmad_first_project.application.tasks import (
+    create_task,
+    edit_task,
+    get_task,
+    list_tasks,
+)
+from bmad_first_project.domain.errors import (
+    DomainValidationError,
+    NotFoundError,
+    StateConflictError,
+)
 from bmad_first_project.domain.task import (
+    BLANK_TITLE_MESSAGE,
+    FINISHED_TASK_MESSAGE,
     PAST_DUE_MESSAGE,
     TASK_NOT_FOUND_MESSAGE,
     Task,
@@ -26,6 +38,7 @@ class MemoryTasks:
     def __init__(self) -> None:
         self.rows: list[Task] = []
         self.gets: list[int] = []
+        self.saves: list[Task] = []
 
     def add(self, task: Task) -> Task:
         stored = replace(task, id=len(self.rows) + 1)
@@ -38,6 +51,13 @@ class MemoryTasks:
 
     def list(self) -> list[Task]:
         return list(self.rows)
+
+    def save(self, task: Task) -> None:
+        self.saves.append(task)
+        index = next((i for i, t in enumerate(self.rows) if t.id == task.id), None)
+        if task.id is None or index is None:
+            raise LookupError("Only a task returned by `get` can be saved.")
+        self.rows[index] = task
 
 
 class FakeUnitOfWork:
@@ -154,3 +174,80 @@ def test_the_int64_bounds_are_asked_of_the_repository(
         get_task(uow, NOW, task_id)
 
     assert uow.tasks.gets == [task_id]
+
+
+def test_edit_saves_the_changed_task_and_returns_its_view(
+    uow: FakeUnitOfWork,
+) -> None:
+    task = create_task(uow, NOW, "Pay rent", "By card", TOMORROW).task
+    assert task.id is not None
+    later = TOMORROW + timedelta(microseconds=1)
+
+    view = edit_task(uow, later, task.id, title=" Pay the rent ")
+
+    expected = replace(task, title="Pay the rent")
+    assert view == TaskView(task=expected, is_overdue=True)
+    assert uow.tasks.saves == [expected]
+    assert uow.tasks.rows == [expected]
+
+
+def test_edit_with_nothing_set_saves_the_task_unchanged(uow: FakeUnitOfWork) -> None:
+    task = create_task(uow, NOW, "Pay rent", None, TOMORROW).task
+    assert task.id is not None
+
+    assert edit_task(uow, NOW, task.id) == TaskView(task=task, is_overdue=False)
+    assert uow.tasks.rows == [task]
+
+
+@pytest.mark.parametrize("task_id", [999, 0, -1])
+def test_edit_of_a_missing_id_is_not_found_before_any_rule(
+    uow: FakeUnitOfWork, task_id: int
+) -> None:
+    create_task(uow, NOW, "Pay rent", None, TOMORROW)
+
+    with pytest.raises(NotFoundError) as caught:
+        edit_task(uow, NOW, task_id, title="")
+
+    assert caught.value.message == TASK_NOT_FOUND_MESSAGE
+    assert uow.tasks.saves == []
+
+
+@pytest.mark.parametrize("task_id", [2**63, -(2**63) - 1])
+def test_edit_of_an_id_outside_int64_is_not_found_without_asking_the_repository(
+    uow: FakeUnitOfWork, task_id: int
+) -> None:
+    with pytest.raises(NotFoundError):
+        edit_task(uow, NOW, task_id, title="New")
+
+    assert uow.tasks.gets == []
+    assert uow.tasks.saves == []
+
+
+@pytest.mark.parametrize("status", [TaskStatus.DONE, TaskStatus.CANCELLED])
+def test_edit_of_a_finished_task_is_a_state_conflict_before_any_rule(
+    uow: FakeUnitOfWork, status: TaskStatus
+) -> None:
+    finished = uow.tasks.add(
+        replace(new_task("Pay rent", None, TOMORROW, NOW), status=status)
+    )
+    assert finished.id is not None
+
+    with pytest.raises(StateConflictError) as caught:
+        edit_task(uow, NOW, finished.id, title="", due_at=NOW - timedelta(days=1))
+
+    assert caught.value.message == FINISHED_TASK_MESSAGE
+    assert caught.value.reason is None
+    assert uow.tasks.saves == []
+    assert uow.tasks.rows == [finished]
+
+
+def test_a_broken_rule_on_edit_saves_nothing(uow: FakeUnitOfWork) -> None:
+    task = create_task(uow, NOW, "Pay rent", None, TOMORROW).task
+    assert task.id is not None
+
+    with pytest.raises(DomainValidationError) as caught:
+        edit_task(uow, NOW, task.id, title="", due_at=NOW - timedelta(days=1))
+
+    assert caught.value.message == BLANK_TITLE_MESSAGE
+    assert uow.tasks.saves == []
+    assert uow.tasks.rows == [task]

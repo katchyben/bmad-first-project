@@ -1,12 +1,13 @@
-"""A task: its shape, its statuses, the value rules for creating one, its view
-and the list order."""
+"""A task: its shape, its statuses, the value rules for creating and editing
+one, its view and the list order."""
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from enum import StrEnum
+from enum import Enum, StrEnum
+from typing import Final, Literal
 
-from bmad_first_project.domain.errors import DomainValidationError
+from bmad_first_project.domain.errors import DomainValidationError, StateConflictError
 
 TITLE_MAX_LENGTH = 200
 DESCRIPTION_MAX_LENGTH = 5000
@@ -16,6 +17,7 @@ TITLE_TOO_LONG_MESSAGE = "Keep the title to 200 characters or fewer."
 DESCRIPTION_TOO_LONG_MESSAGE = "Keep the description to 5,000 characters or fewer."
 PAST_DUE_MESSAGE = "That time has already passed."
 TASK_NOT_FOUND_MESSAGE = "That task no longer exists."
+FINISHED_TASK_MESSAGE = "That task is finished and can't be changed."
 
 
 class TaskStatus(StrEnum):
@@ -91,6 +93,49 @@ def new_task(
         status=TaskStatus.TO_DO,
         created_at=now.astimezone(UTC),
     )
+
+
+class Unset(Enum):
+    """The type of `UNSET`: an edit that leaves a field as it is."""
+
+    UNSET = "unset"
+
+
+UNSET: Final = Unset.UNSET
+
+_FINISHED = frozenset({TaskStatus.DONE, TaskStatus.CANCELLED})
+
+
+def edit_task(
+    task: Task,
+    now: datetime,
+    *,
+    title: str | Literal[Unset.UNSET] = UNSET,
+    description: str | None | Literal[Unset.UNSET] = UNSET,
+    due_at: datetime | Literal[Unset.UNSET] = UNSET,
+) -> Task:
+    """The task with the given fields changed and every value rule applied.
+
+    A field left as `UNSET` is unchanged. A finished (Done or Cancelled) task
+    can't be edited at all, so that `StateConflictError` comes before any value
+    rule. The past-date check runs only when `due_at` moves to a different
+    instant, so an overdue task keeps its past `due_at` through other edits.
+    Status, `created_at`, `finished_at` and `previous_status` never change.
+    """
+    if task.status in _FINISHED:
+        raise StateConflictError(FINISHED_TASK_MESSAGE)
+    _require_aware(now, "now")
+    changes: dict[str, object] = {}
+    if title is not UNSET:
+        changes["title"] = normalise_title(title)
+    if description is not UNSET:
+        changes["description"] = normalise_description(description)
+    if due_at is not UNSET:
+        _require_aware(due_at, "due_at")
+        if due_at != task.due_at:
+            check_due_at(due_at, now)
+        changes["due_at"] = due_at.astimezone(UTC)
+    return replace(task, **changes)
 
 
 @dataclass(frozen=True)

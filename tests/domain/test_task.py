@@ -1,19 +1,21 @@
-"""Task value rules applied by `new_task` against an explicit `now`."""
+"""Task value rules applied by `new_task` and `edit_task` against an explicit `now`."""
 
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
-from bmad_first_project.domain.errors import DomainValidationError
+from bmad_first_project.domain.errors import DomainValidationError, StateConflictError
 from bmad_first_project.domain.task import (
     BLANK_TITLE_MESSAGE,
     DESCRIPTION_TOO_LONG_MESSAGE,
+    FINISHED_TASK_MESSAGE,
     PAST_DUE_MESSAGE,
     TASK_NOT_FOUND_MESSAGE,
     TITLE_TOO_LONG_MESSAGE,
     Task,
     TaskStatus,
     TaskView,
+    edit_task,
     new_task,
     order_tasks,
     view_task,
@@ -32,6 +34,7 @@ def test_messages_are_the_agreed_strings() -> None:
     )
     assert PAST_DUE_MESSAGE == "That time has already passed."
     assert TASK_NOT_FOUND_MESSAGE == "That task no longer exists."
+    assert FINISHED_TASK_MESSAGE == "That task is finished and can't be changed."
 
 
 def test_status_values_are_the_stored_strings() -> None:
@@ -281,3 +284,177 @@ def test_order_returns_a_new_list_and_handles_empty() -> None:
 def test_ordering_an_unstored_task_is_a_value_error() -> None:
     with pytest.raises(ValueError):
         order_tasks([new_task("Pay rent", None, TOMORROW, NOW)])
+
+
+YESTERDAY = NOW - timedelta(days=1)
+
+
+def _editable(
+    status: TaskStatus = TaskStatus.TO_DO, due_at: datetime = TOMORROW
+) -> Task:
+    return Task(
+        title="Pay rent",
+        description="By card",
+        due_at=due_at,
+        status=status,
+        created_at=NOW - timedelta(days=2),
+        id=7,
+    )
+
+
+@pytest.mark.parametrize("status", [TaskStatus.TO_DO, TaskStatus.IN_PROGRESS])
+def test_edit_with_nothing_set_returns_the_task_unchanged(status: TaskStatus) -> None:
+    task = _editable(status)
+
+    assert edit_task(task, NOW) == task
+
+
+def test_edit_changes_only_the_given_fields() -> None:
+    task = _editable(TaskStatus.IN_PROGRESS)
+
+    edited = edit_task(task, NOW, title="  New  ")
+
+    assert edited == Task(
+        title="New",
+        description="By card",
+        due_at=TOMORROW,
+        status=TaskStatus.IN_PROGRESS,
+        created_at=task.created_at,
+        id=7,
+    )
+
+
+def test_edit_never_changes_status_created_finished_or_previous() -> None:
+    task = Task(
+        title="Pay rent",
+        description=None,
+        due_at=TOMORROW,
+        status=TaskStatus.IN_PROGRESS,
+        created_at=YESTERDAY,
+        finished_at=None,
+        previous_status=TaskStatus.TO_DO,
+        id=3,
+    )
+
+    edited = edit_task(
+        task, NOW, title="New", description="Notes", due_at=TOMORROW + timedelta(1)
+    )
+
+    assert edited.status is TaskStatus.IN_PROGRESS
+    assert edited.created_at == YESTERDAY
+    assert edited.finished_at is None
+    assert edited.previous_status is TaskStatus.TO_DO
+    assert edited.id == 3
+
+
+@pytest.mark.parametrize("description", [None, ""])
+def test_edit_clears_the_description(description: str | None) -> None:
+    assert edit_task(_editable(), NOW, description=description).description is None
+
+
+def test_edit_keeps_a_new_description_untrimmed() -> None:
+    edited = edit_task(_editable(), NOW, description=" Notes ")
+
+    assert edited.description == " Notes "
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        pytest.param({"title": "   "}, BLANK_TITLE_MESSAGE, id="blank-title"),
+        pytest.param({"title": "😀" * 201}, TITLE_TOO_LONG_MESSAGE, id="long-title"),
+        pytest.param(
+            {"description": "😀" * 5001},
+            DESCRIPTION_TOO_LONG_MESSAGE,
+            id="long-description",
+        ),
+        pytest.param(
+            {"due_at": NOW - timedelta(microseconds=1)}, PAST_DUE_MESSAGE, id="past"
+        ),
+    ],
+)
+def test_edit_applies_the_create_rules(changes: dict, message: str) -> None:
+    with pytest.raises(DomainValidationError) as caught:
+        edit_task(_editable(), NOW, **changes)
+
+    assert caught.value.message == message
+
+
+def test_edit_accepts_due_exactly_now_and_stores_utc() -> None:
+    plus_two = timezone(timedelta(hours=2))
+
+    edited = edit_task(_editable(), NOW, due_at=NOW.astimezone(plus_two))
+
+    assert edited.due_at == NOW
+    assert edited.due_at.tzinfo is UTC
+
+
+def test_an_overdue_task_keeps_its_past_due_at_through_other_edits() -> None:
+    task = _editable(due_at=YESTERDAY)
+
+    edited = edit_task(task, NOW, title="New", description=None)
+
+    assert edited.due_at == YESTERDAY
+    assert view_task(edited, NOW).is_overdue
+
+
+def test_the_same_past_instant_in_another_offset_is_unchanged() -> None:
+    minus_five = timezone(timedelta(hours=-5))
+    task = _editable(due_at=YESTERDAY)
+
+    edited = edit_task(task, NOW, due_at=YESTERDAY.astimezone(minus_five))
+
+    assert edited.due_at == YESTERDAY
+    assert edited.due_at.tzinfo is UTC
+
+
+def test_moving_an_overdue_task_to_another_past_instant_is_rejected() -> None:
+    task = _editable(due_at=YESTERDAY)
+
+    with pytest.raises(DomainValidationError) as caught:
+        edit_task(task, NOW, due_at=YESTERDAY + timedelta(microseconds=1))
+
+    assert caught.value.message == PAST_DUE_MESSAGE
+
+
+def test_moving_an_overdue_task_into_the_future_clears_overdue() -> None:
+    edited = edit_task(_editable(due_at=YESTERDAY), NOW, due_at=TOMORROW)
+
+    assert edited.due_at == TOMORROW
+    assert not view_task(edited, NOW).is_overdue
+
+
+@pytest.mark.parametrize("status", [TaskStatus.DONE, TaskStatus.CANCELLED])
+@pytest.mark.parametrize(
+    "changes",
+    [
+        pytest.param({}, id="nothing"),
+        pytest.param({"title": "New"}, id="valid"),
+        pytest.param({"title": "", "due_at": YESTERDAY}, id="invalid"),
+    ],
+)
+def test_editing_a_finished_task_is_a_state_conflict(
+    status: TaskStatus, changes: dict
+) -> None:
+    with pytest.raises(StateConflictError) as caught:
+        edit_task(_editable(status), NOW, **changes)
+
+    assert caught.value.message == FINISHED_TASK_MESSAGE
+    assert caught.value.reason is None
+
+
+def test_edit_checks_title_before_due_at() -> None:
+    with pytest.raises(DomainValidationError) as caught:
+        edit_task(_editable(), NOW, title="", due_at=YESTERDAY)
+
+    assert caught.value.message == BLANK_TITLE_MESSAGE
+
+
+def test_edit_with_a_naive_due_at_or_now_is_a_value_error() -> None:
+    with pytest.raises(ValueError) as caught:
+        edit_task(_editable(), NOW, due_at=TOMORROW.replace(tzinfo=None))
+    assert not isinstance(caught.value, DomainValidationError)
+
+    with pytest.raises(ValueError) as caught:
+        edit_task(_editable(), NOW.replace(tzinfo=None), due_at=TOMORROW)
+    assert not isinstance(caught.value, DomainValidationError)

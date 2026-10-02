@@ -10,7 +10,9 @@ from pydantic import (
     BaseModel,
     BeforeValidator,
     ConfigDict,
+    field_validator,
 )
+from pydantic.json_schema import SkipJsonSchema
 
 from bmad_first_project.adapters.http.dependencies import (
     CurrentSessionDep,
@@ -44,14 +46,37 @@ def _to_utc(value: datetime) -> datetime:
         raise ValueError("due_at is out of range in UTC") from error
 
 
+# An ISO 8601 string with an offset, converted to UTC; shared by create and edit.
+DueAt = Annotated[
+    AwareDatetime, BeforeValidator(_require_string), AfterValidator(_to_utc)
+]
+
+
 class CreateTaskBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str
     description: str | None = None
-    due_at: Annotated[
-        AwareDatetime, BeforeValidator(_require_string), AfterValidator(_to_utc)
-    ]
+    due_at: DueAt
+
+
+# A partial edit: an omitted key is unchanged, so check `model_fields_set`.
+# `description: null` clears it; `title` and `due_at` can't be null. The None
+# defaults only mark a key as omitted and are left out of the schema.
+class EditTaskBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | SkipJsonSchema[None] = None
+    description: str | None = None
+    due_at: DueAt | SkipJsonSchema[None] = None
+
+    @field_validator("title", "due_at", mode="before")
+    @classmethod
+    def _not_null(cls, value: object) -> object:
+        # Runs only for keys that were sent; defaults aren't validated.
+        if value is None:
+            raise ValueError("this field can't be null")
+        return value
 
 
 class TaskResponse(BaseModel):
@@ -116,3 +141,24 @@ def get_task(
 ) -> TaskResponse:
     """One task by its ID, as it looks now."""
     return TaskResponse.from_view(tasks.get_task(uow, now, task_id))
+
+
+@router.patch(
+    "/{task_id}",
+    response_model=TaskResponse,
+    responses=error_responses(401, 404, 409),
+)
+def edit_task(
+    session: CurrentSessionDep,
+    task_id: int,
+    body: EditTaskBody,
+    uow: UnitOfWorkDep,
+    now: NowDep,
+) -> TaskResponse:
+    """Change a task's title, description or due date-time and return it.
+
+    Only the keys sent change; for an active task, an empty body returns it
+    unchanged. A finished task can't be edited.
+    """
+    changes = {name: getattr(body, name) for name in body.model_fields_set}
+    return TaskResponse.from_view(tasks.edit_task(uow, now, task_id, **changes))

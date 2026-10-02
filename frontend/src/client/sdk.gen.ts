@@ -3,7 +3,7 @@
 
 import { type Client, type ClientMeta, type Options as Options2, type RequestResult, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { CreateTaskData, CreateTaskErrors, CreateTaskResponses, GetTaskData, GetTaskErrors, GetTaskResponses, ListTasksData, ListTasksErrors, ListTasksResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses } from './types.gen';
+import type { CreateTaskData, CreateTaskErrors, CreateTaskResponses, EditTaskData, EditTaskErrors, EditTaskResponses, GetTaskData, GetTaskErrors, GetTaskResponses, ListTasksData, ListTasksErrors, ListTasksResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -80,4 +80,22 @@ export const getTask = <ThrowOnError extends boolean = false>(options: Options<G
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/tasks/{task_id}',
     ...options
+});
+
+/**
+ * Edit Task
+ *
+ * Change a task's title, description or due date-time and return it.
+ *
+ * Only the keys sent change; for an active task, an empty body returns it
+ * unchanged. A finished task can't be edited.
+ */
+export const editTask = <ThrowOnError extends boolean = false>(options: Options<EditTaskData, ThrowOnError>): RequestResult<EditTaskResponses, EditTaskErrors, ThrowOnError> => (options.client ?? client).patch<EditTaskResponses, EditTaskErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/tasks/{task_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });

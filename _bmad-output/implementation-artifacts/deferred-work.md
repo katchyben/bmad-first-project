@@ -62,3 +62,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1b-create-a-task-through-the-api.md`
   summary: `view_task` computes `is_overdue = due_at < now` for every status; the first Epic 3 story that finishes a task must make finished (done or cancelled) tasks never overdue, as the epic context requires.
   evidence: `domain/task.py::view_task` has no status check; unverifiable now because no task can be finished in Epic 2 (would be medium once Epic 3 lands).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-edit-a-task-through-the-api.md`
+  summary: Task use cases read with `get` then write the whole task with `save`, so a concurrent request changing status (Epic 3 actions) or deleting the task between the two can be overwritten, or surface `LookupError` as a 500.
+  evidence: AD-15's whole-task `save`; unverified under real concurrency (a single user on SQLite). It would need two overlapping requests on one task, and is worth an optimistic guard (`UPDATE … WHERE id AND status`) when Epic 3 adds status actions.

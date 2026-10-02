@@ -24,6 +24,10 @@ def _to_domain(row: TaskRow) -> Task:
     )
 
 
+def _status_value(status: TaskStatus | None) -> str | None:
+    return None if status is None else status.value
+
+
 class SqlTaskRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -36,9 +40,7 @@ class SqlTaskRepository:
             status=task.status.value,
             created_at=task.created_at,
             finished_at=task.finished_at,
-            previous_status=(
-                None if task.previous_status is None else task.previous_status.value
-            ),
+            previous_status=_status_value(task.previous_status),
         )
         self._session.add(row)
         self._session.flush()
@@ -52,3 +54,16 @@ class SqlTaskRepository:
         # No ORDER BY: the order belongs to the domain.
         rows = self._session.scalars(select(TaskRow)).all()
         return [_to_domain(row) for row in rows]
+
+    def save(self, task: Task) -> None:
+        row = None if task.id is None else self._session.get(TaskRow, task.id)
+        if row is None:
+            raise LookupError("Only a task returned by `get` can be saved.")
+        row.title = task.title
+        row.description = task.description
+        row.due_at = task.due_at
+        row.status = task.status.value
+        row.created_at = task.created_at
+        row.finished_at = task.finished_at
+        row.previous_status = _status_value(task.previous_status)
+        self._session.flush()

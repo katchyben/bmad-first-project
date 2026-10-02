@@ -1,4 +1,5 @@
-"""Plain API test helpers and constants: the account, a login, a bearer header."""
+"""Plain API test helpers and constants: the account, a login, a bearer header and
+the stored tasks."""
 
 from datetime import UTC, datetime
 
@@ -9,6 +10,7 @@ from sqlalchemy import Engine
 from bmad_first_project.adapters.passwords import Argon2PasswordHasher
 from bmad_first_project.adapters.persistence.unit_of_work import SqlUnitOfWork
 from bmad_first_project.application.accounts import create_or_update_account
+from bmad_first_project.domain.task import Task
 
 FIXED_NOW = datetime(2026, 10, 1, 12, 30, 45, 123456, tzinfo=UTC)
 USERNAME = "benny"
@@ -45,3 +47,9 @@ def get_token(client: TestClient) -> str:
 
 def bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def stored_task(engine: Engine, task_id: int) -> Task | None:
+    """The task as the database holds it now, read in a fresh unit of work."""
+    with SqlUnitOfWork(engine) as uow:
+        return uow.tasks.get(task_id)

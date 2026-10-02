@@ -71,6 +71,13 @@ class TaskRepository(Protocol):
         """Every stored task, in no particular order."""
         ...
 
+    def save(self, task: Task) -> None:
+        """Write the whole of a task previously returned by `get`, by its ID.
+
+        A task with no ID, or an ID that isn't stored, raises `LookupError`.
+        """
+        ...
+
 
 class UnitOfWork(Protocol):
     """One transaction, used as a context manager.

@@ -4,8 +4,8 @@
 import { queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createTask, getTask, listTasks, login, logout, type Options } from '../sdk.gen';
-import type { CreateTaskData, CreateTaskError, CreateTaskResponse, GetTaskData, GetTaskError, GetTaskResponse, ListTasksData, ListTasksError, ListTasksResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse } from '../types.gen';
+import { createTask, editTask, getTask, listTasks, login, logout, type Options } from '../sdk.gen';
+import type { CreateTaskData, CreateTaskError, CreateTaskResponse, EditTaskData, EditTaskError, EditTaskResponse, GetTaskData, GetTaskError, GetTaskResponse, ListTasksData, ListTasksError, ListTasksResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse } from '../types.gen';
 
 /**
  * Login
@@ -136,3 +136,25 @@ export const getTaskOptions = (options: Options<GetTaskData>) => queryOptions<Ge
     },
     queryKey: getTaskQueryKey(options)
 });
+
+/**
+ * Edit Task
+ *
+ * Change a task's title, description or due date-time and return it.
+ *
+ * Only the keys sent change; for an active task, an empty body returns it
+ * unchanged. A finished task can't be edited.
+ */
+export const editTaskMutation = (options?: Partial<Options<EditTaskData>>): UseMutationOptions<EditTaskResponse, EditTaskError, Options<EditTaskData>> => {
+    const mutationOptions: UseMutationOptions<EditTaskResponse, EditTaskError, Options<EditTaskData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await editTask({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
