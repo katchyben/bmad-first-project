@@ -109,7 +109,9 @@ action_items:
     action: "Decide whether the build three-layer review counts as code review for
       review to done, or run bmad-code-review first"
     owner: "Benny"
-    status: open
+    status: done
+    resolution: "2026-10-02: Benny decided the build three-layer review counts as
+      the code review for review to done; no separate bmad-code-review pass"
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
   - id: "epic-1-retro-item-8-when-a-review-changes-a-spec-frozen-inte"
     epic: 1
