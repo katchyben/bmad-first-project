@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-01-2026 16:41
-last_updated: 10-02-2026 06:30
+last_updated: 10-02-2026 07:05
 project: bmad-first-project
 project_key: NOKEY
 tracking_system: file-system
@@ -45,12 +45,18 @@ development_status:
   epic-1-retrospective: done
 
   epic-2: backlog
-  2-1-create-a-task-through-the-api: backlog
+  2-1a-create-tasks-in-the-domain-and-store-them: backlog
+  2-1b-create-a-task-through-the-api: backlog
   2-2-view-my-tasks-in-urgency-order-through-the-api: backlog
   2-3-edit-a-task-through-the-api: backlog
   2-4-delete-a-task-through-the-api: backlog
-  2-5-see-and-add-tasks-in-the-web-app: backlog
-  2-6-edit-and-delete-tasks-in-the-web-app: backlog
+  2-5a-show-my-tasks-on-the-main-screen: backlog
+  2-5b-add-a-task-from-the-main-screen: backlog
+  2-5c-pick-any-due-date-time: backlog
+  2-5d-move-through-my-tasks-with-the-keyboard: backlog
+  2-5e-know-when-the-server-can-t-be-reached: backlog
+  2-6a-edit-a-task-in-place: backlog
+  2-6b-delete-a-task-with-an-inline-confirm: backlog
   epic-2-retrospective: optional
 
   epic-3: backlog
@@ -87,7 +93,7 @@ action_items:
     epic: 1
     action: "Story 2.5: render the connection banner on the Login screen too, so a
       login while the server is unreachable gives feedback"
-    owner: "dev (Story 2.5)"
+    owner: "dev (Story 2.5e)"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
   - id: "epic-1-retro-item-5-epic-2-first-protected-query-e2e-where-a"
@@ -102,7 +108,9 @@ action_items:
     action: "Size Epic 2 stories to fit within one spec each when creating or refining
       them"
     owner: "Benny"
-    status: open
+    status: done
+    resolution: "2026-10-02: split in epics.md into 2.1a-b, 2.5a-e and 2.6a-b (13
+      stories); item 4 is now an acceptance criterion of Story 2.5e"
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
   - id: "epic-1-retro-item-7-decide-whether-the-build-three-layer-rev"
     epic: 1

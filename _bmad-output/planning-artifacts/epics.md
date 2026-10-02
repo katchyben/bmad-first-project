@@ -397,23 +397,49 @@ So that I can get into my app from the browser and leave it safely.
 
 I can add tasks with a due date-time, see them in urgency order with overdue tasks highlighted, open, edit and delete them: a working todo list. Every task is To do in this epic; the status workflow arrives in Epic 3.
 
-### Story 2.1: Create a task through the API
+Stories 2.1, 2.5 and 2.6 are split into lettered sub-stories (2.1a–b, 2.5a–e, 2.6a–b) so each fits one spec (Epic 1 retro action item 6). Elsewhere in this document, a reference to 2.1, 2.5 or 2.6 means the whole family.
+
+### Story 2.1a: Create tasks in the domain and store them
 
 As the app's owner,
-I want to add a task with a title, an optional description and a due date-time,
+I want the app to know what a valid task is and keep the tasks I create,
+So that every way of adding a task follows the same rules.
+
+**Acceptance Criteria:**
+
+**Given** a title, an optional description, a `due_at` with an offset and an explicit `now`
+**When** the domain creates the task
+**Then** it is To do, `created_at` equals `now`, `finished_at` is empty, and the title is stored trimmed (FR4, AR13)
+**And** a migration-created `tasks` table stores the task with the AD-14 columns, written through the `TaskRepository` port and the unit of work, and reading it back returns the same values with `due_at` in UTC (AR14, AR15)
+
+**Given** a title that is blank after trimming, or longer than 200 code points after trimming, or a description longer than 5,000 code points
+**When** the domain creates the task
+**Then** it raises `DomainValidationError` and nothing is stored (FR4, AR2)
+**And** each rule has its own fixed calm message defined in the domain per the Story 1.1 voice convention (one for a blank title, one for a title over 200 characters, one for a description over 5,000 characters), and tests assert the exact strings (NFR2, UX-DR3)
+
+**Given** a `due_at` earlier than `now` (even by one microsecond)
+**When** the domain creates the task
+**Then** it raises `DomainValidationError` with the message exactly "That time has already passed."; a `due_at` equal to `now` is accepted (FR4, NFR3, UX-DR3)
+
+**Given** the domain and persistence tests
+**When** they run
+**Then** domain unit tests cover every rule with an explicit `now`, with no real waiting, and persistence tests show the migration reaches head and the repository round-trips a task on a scratch database (NFR6)
+
+### Story 2.1b: Create a task through the API
+
+As the app's owner,
+I want to add a task with a title, an optional description and a due date-time through the API,
 So that I capture what I need to do and when.
 
 **Acceptance Criteria:**
 
 **Given** I am authenticated
 **When** I send `POST /api/tasks` with a valid title, optional description and a future `due_at` with an offset
-**Then** I get 201 with a `TaskResponse` (`id`, `title`, `description`, `due_at`, `status`, `created_at`, `finished_at`, `is_overdue`), status `to_do`, `created_at` equal to the request's `now`, and `due_at` returned in UTC with `Z` (FR4, AR13, AR14)
-**And** a migration-created `tasks` table stores the task with the AD-14 columns, written through the `TaskRepository` port and the unit of work (AR14, AR15)
+**Then** I get 201 with a `TaskResponse` (`id`, `title`, `description`, `due_at`, `status`, `created_at`, `finished_at`, `is_overdue`), status `to_do`, `created_at` equal to the request's `now`, and `due_at` returned in UTC with `Z`, and the task is stored through Story 2.1a's domain and repository (FR4, AR13, AR14)
 
-**Given** a title that is blank after trimming, or longer than 200 code points after trimming, or a description longer than 5,000 code points
+**Given** a title or description that breaks a Story 2.1a rule
 **When** I create the task
-**Then** I get `validation_error` (422) from the domain, and the stored title is the trimmed value when valid (FR4, AR2)
-**And** each rule has its own fixed calm message defined in the domain per the Story 1.1 voice convention (one for a blank title, one for a title over 200 characters, one for a description over 5,000 characters), and tests assert the exact strings (NFR2, UX-DR3)
+**Then** I get `validation_error` (422) with that rule's exact domain message, and nothing is created (FR4, AR2, NFR2)
 
 **Given** a missing `due_at`, a naive `due_at` without an offset, or a `due_at` earlier than the request's `now` (even by one microsecond)
 **When** I create the task
@@ -427,7 +453,7 @@ So that I capture what I need to do and when.
 **Given** no valid bearer token
 **When** I call `POST /api/tasks`
 **Then** I get `unauthenticated` (401) and nothing is created (FR3)
-**And** domain unit tests cover every rule with an explicit `now`, with no real waiting (NFR6)
+**And** the committed `frontend/openapi.json` and the generated client are regenerated with the new route, and the drift checks pass (AR11)
 
 ### Story 2.2: View my tasks in urgency order through the API
 
@@ -513,10 +539,10 @@ So that my list only holds real work.
 **Then** I get `not_found` (404) or `unauthenticated` (401) respectively (FR-X, FR3)
 **And** a domain unit test shows that deleting an In progress, Done or Cancelled task raises `StateConflictError`, ready for Epic 3's API tests (FR6)
 
-### Story 2.5: See and add tasks in the web app
+### Story 2.5a: Show my tasks on the main screen
 
 As the app's owner,
-I want my main screen to show my tasks in urgency order and let me add new ones quickly,
+I want my main screen to show my tasks in urgency order, with overdue ones highlighted,
 So that I can plan my day from the browser.
 
 **Acceptance Criteria:**
@@ -539,6 +565,31 @@ So that I can plan my day from the browser.
 **When** the row is shown unselected
 **Then** the title is clipped at the end of the second line with a trailing ellipsis (`line-clamp: 2`), the labels and due time wrap under it rather than collide, and the accessible name carries the full title; when the row is selected (focused or not) the full title shows and the row grows to fit (UX-DR6)
 
+**Given** the All view has no active tasks
+**When** the main screen loads
+**Then** a card in the list position shows a 44px outlined ring, "Nothing due. Enjoy the quiet." and "Type above when something comes up." instead of a blank list (UX-DR18)
+
+**Given** a cold load
+**When** the data arrives within 1 s
+**Then** no spinner or skeleton shows and the list fades in over 180ms; when the load is still pending after 1 s and the server is reachable, a single muted "Loading…" line appears where the list goes, is announced once and is replaced by the list; it never shows for refetches after a mutation (UX-DR17, UX-DR28, UX-DR29)
+
+**Given** `prefers-reduced-motion` is set
+**When** the list, "Loading…" line or row content changes
+**Then** content swaps instantly with no fade, and the 1 s "Loading…" delay is unchanged (UX-DR29)
+
+**Given** the main screen at 400% browser zoom
+**When** it renders
+**Then** the list reflows into the single column with no horizontal scroll (UX-DR2, UX-DR30)
+**And** a Playwright test covers seeing tasks from the API in the list; component tests cover overdue highlighting, the two-line clamp and the 1 s "Loading…" delay (fake timers) (NFR6)
+
+### Story 2.5b: Add a task from the main screen
+
+As the app's owner,
+I want to add a task quickly with a title, a preset due time and an optional description,
+So that capturing work takes seconds.
+
+**Acceptance Criteria:**
+
 **Given** the add-task input (placeholder "Add a task", label "Add a task", `aria-hidden` plus icon, `kbd-hint` "⌘K" unfocused and "Enter" focused) with the chips "Tomorrow 9:00 AM" (preselected), "Next Monday 9:00 AM" and "Pick date…" beneath it
 **When** I type a title and press Enter
 **Then** the task is created through the generated client with the selected due date-time resolved in browser local time at submit, the task list query is invalidated and refetched (no optimistic insert), and the new task appears in its sorted position (FR4, AR11, UX-DR9, UX-DR10)
@@ -548,11 +599,6 @@ So that I can plan my day from the browser.
 **When** I submit and its label is resolved to an instant in browser local time
 **Then** "Next Monday 9:00 AM" on a Monday resolves to +7 days, and a preset whose time has already passed at submit rolls forward to its next valid occurrence, so a preset never submits a past time (UX-DR10)
 
-**Given** I activate "Pick date…"
-**When** the due popover opens
-**Then** it is a modal Radix Popover (focus trapped) with a shadcn Calendar on the current month with past days disabled, a `type="time"` field with a visible "Time" label defaulting to 9:00 AM (or the next full hour if today is chosen after 9:00 AM) and a primary "Set" button; the date-time picker therefore starts at or after the current time (UX-DR10, UX-DR27)
-**And** Enter on a day moves focus to the time field, Enter in the time field is Set, Set closes the popover, shows the value in the third chip (e.g. "Oct 12, 9:00 AM") and returns focus to the add input; Esc closes it without change and returns focus to the chip (UX-DR10)
-
 **Given** the "Add description" link under the chip row
 **When** I click it or press Enter or Space on it
 **Then** it is replaced by a 3-row textarea (placeholder "Description (optional)", label "Description") with focus in it; Enter submits the whole task, Shift+Enter inserts a newline, Esc returns focus to the title with the text kept; it stays open while it has text and, after a successful add, clears and collapses back to the link with focus back in the title (FR4, UX-DR11, UX-DR27)
@@ -560,6 +606,37 @@ So that I can plan my day from the browser.
 **Given** the API rejects the new task (including a blank title or "That time has already passed." for a past time)
 **When** the error comes back
 **Then** the envelope message appears as written in the input's single error slot under it (`role="alert"`, linked via `aria-describedby`, input `aria-invalid`), and everything I typed is kept; the frontend does no pre-validation and sends a blank title to the API like any other value (NFR1, NFR2, UX-DR3, UX-DR9, UX-DR27)
+
+**Given** the main screen at 400% browser zoom
+**When** it renders
+**Then** the add input, chips and "Add description" link reflow with no horizontal scroll, and every one of those targets is at least 24px high (UX-DR2, UX-DR30)
+**And** a Playwright test covers adding a task by title + Enter and seeing it in the list; component tests cover preset roll-forward and the error slot (NFR6)
+
+### Story 2.5c: Pick any due date-time
+
+As the app's owner,
+I want to choose a specific date and time when no preset fits,
+So that I can schedule a task for exactly when it is due.
+
+**Acceptance Criteria:**
+
+**Given** I activate "Pick date…"
+**When** the due popover opens
+**Then** it is a modal Radix Popover (focus trapped) with a shadcn Calendar on the current month with past days disabled, a `type="time"` field with a visible "Time" label defaulting to 9:00 AM (or the next full hour if today is chosen after 9:00 AM) and a primary "Set" button; the date-time picker therefore starts at or after the current time (UX-DR10, UX-DR27)
+**And** Enter on a day moves focus to the time field, Enter in the time field is Set, Set closes the popover, shows the value in the third chip (e.g. "Oct 12, 9:00 AM") and returns focus to the add input; Esc closes it without change and returns focus to the chip (UX-DR10)
+
+**Given** the due popover opens or closes
+**When** it animates
+**Then** it uses the 180ms opacity fade only, with shadcn's zoom and slide classes removed, and swaps instantly under `prefers-reduced-motion` (UX-DR29)
+**And** a Playwright test covers adding a task with "Pick date…" and seeing it in the list (NFR6)
+
+### Story 2.5d: Move through my tasks with the keyboard
+
+As the app's owner,
+I want to reach the add input and move through my tasks from the keyboard,
+So that I can work without the mouse.
+
+**Acceptance Criteria:**
 
 **Given** the main screen
 **When** I press ⌘K (Ctrl+K off macOS) from anywhere, or Esc in the add input
@@ -571,38 +648,38 @@ So that I can plan my day from the browser.
 **And** while the list has focus the selected row carries a 2px inset `ring` plus the `row-selected` tint (overdue rows keep their tint and rule), and when the list loses focus it keeps the tint only; the selected row is scrolled into view (`block: nearest`) on every selection change (UX-DR22, UX-DR25)
 **And** each row's accessible name has the full title, status, due date-time and "overdue" when applicable (UX-DR26)
 
-**Given** the All view has no active tasks
-**When** the main screen loads
-**Then** a card in the list position shows a 44px outlined ring, "Nothing due. Enjoy the quiet." and "Type above when something comes up." instead of a blank list (UX-DR18)
+**Given** the list with several tasks
+**When** I use the keyboard
+**Then** a Playwright test covers Tab into the list selecting the first row, ↑/↓ moving the selection without wrapping, ⌘K focusing the add input, and Esc in the add input moving focus to the list (NFR6)
 
-**Given** a cold load
-**When** the data arrives within 1 s
-**Then** no spinner or skeleton shows and the list fades in over 180ms; when the load is still pending after 1 s and the server is reachable, a single muted "Loading…" line appears where the list goes, is announced once and is replaced by the list; it never shows for refetches after a mutation (UX-DR17, UX-DR28, UX-DR29)
+### Story 2.5e: Know when the server can't be reached
+
+As the app's owner,
+I want to see when the app can't reach the server, and when it reconnects,
+So that I know my actions aren't getting through.
+
+**Acceptance Criteria:**
 
 **Given** a request fails at the network level
 **When** the server is unreachable
 **Then** a full-width line "Can't reach the server. Retrying…" appears above the column, announced once; current content stays visible and interactive; on the next successful response it disappears and "Reconnected." is announced once (UX-DR16, UX-DR28)
 
-**Given** `prefers-reduced-motion` is set
-**When** the list, "Loading…" line or row content changes
-**Then** content swaps instantly with no fade, and the 1 s "Loading…" delay is unchanged (UX-DR29)
+**Given** the Login screen
+**When** a login request fails at the network level (including a Vite proxy 502)
+**Then** the same connection banner appears above the login card and clears on the next successful response, so a login attempt while the server is unreachable always gets feedback (UX-DR16; Epic 1 retro B1)
+**And** component tests cover the banner on both screens, its single announcement and "Reconnected." (NFR6)
 
-**Given** the main screen at 400% browser zoom
-**When** it renders
-**Then** it reflows into the single column with no horizontal scroll, and every interactive target (chips, "Add description" link, add input) is at least 24px high (UX-DR2, UX-DR30)
-**And** a Playwright test covers adding a task by title + Enter and with "Pick date…", and seeing it in the list; component tests cover overdue highlighting, the two-line clamp, preset roll-forward, the 1 s "Loading…" delay (fake timers) and the connection banner (NFR6)
-
-### Story 2.6: Edit and delete tasks in the web app
+### Story 2.6a: Edit a task in place
 
 As the app's owner,
-I want to edit or delete a task from the main screen,
+I want to edit a task's title, description or due date-time from the main screen,
 So that I can fix mistakes without leaving the app.
 
 **Acceptance Criteria:**
 
 **Given** an active task row
 **When** I hover it or select it
-**Then** its Edit action (and Delete, on a To do row) fades in (180ms) as ghost buttons at least 26px high at the right edge, replacing the due time on hover and keeping the due time visible, shifted left, on selection; each button has a tooltip naming its key ("Edit (E)", "Delete (⌫)") and `aria-keyshortcuts`; finished rows offer neither (FR5, FR6, UX-DR8, UX-DR30)
+**Then** its Edit action fades in (180ms) as ghost buttons at least 26px high at the right edge, replacing the due time on hover and keeping the due time visible, shifted left, on selection; each button has a tooltip naming its key ("Edit (E)") and `aria-keyshortcuts`; finished rows offer neither (FR5, UX-DR8, UX-DR30)
 
 **Given** an active task is selected with focus in the list
 **When** I press E or activate Edit
@@ -624,9 +701,32 @@ So that I can fix mistakes without leaving the app.
 **When** the error comes back
 **Then** the envelope message appears as written in the row's single error slot directly above Cancel/Save, `role="alert"`, linked to every field in the row via `aria-describedby`, and everything I typed is kept (NFR2, UX-DR3, UX-DR19, UX-DR27)
 
-**Given** the API rejects an edit or a delete with `state_conflict` or `not_found`, or answers with a 5xx
+**Given** the API rejects an edit with `state_conflict` or `not_found`, or answers with a 5xx
 **When** the error comes back
 **Then** the envelope message (or "Something went wrong. Try again.") appears as written in an error toast with a 24×24 "Dismiss" close button; it is announced and stays until dismissed (NFR2, UX-DR15)
+
+**Given** a finished task is selected
+**When** I press E
+**Then** nothing happens and no request is sent (FR5, UX-DR21)
+
+**Note (reconcile F6, accepted):** a task's description is visible only inside the inline edit row; the list row shows no description and no indicator that one exists. This is a deliberate decision under SM-C1 (no extra features), not a gap to fill in this story.
+
+**Given** the edit row
+**When** it renders at 400% zoom
+**Then** it reflows without horizontal scroll and every button is at least 24px high (UX-DR2, UX-DR30)
+**And** a Playwright test covers editing a task (only changed fields sent); a component test covers the edit row's single error slot (NFR6)
+
+### Story 2.6b: Delete a task with an inline confirm
+
+As the app's owner,
+I want to delete a To do task from the main screen, with a confirm that's hard to trigger by accident,
+So that I can remove mistakes without losing real work.
+
+**Acceptance Criteria:**
+
+**Given** a To do task row
+**When** I hover it or select it
+**Then** a Delete action joins Edit, with the same reveal, fade and size as Edit, a tooltip "Delete (⌫)" and `aria-keyshortcuts`; In progress and finished rows offer no Delete (FR6, UX-DR8, UX-DR30)
 
 **Given** a To do task is selected with focus in the list
 **When** I press ⌫ or activate Delete
@@ -640,16 +740,18 @@ So that I can fix mistakes without leaving the app.
 **When** I press ⌫ a second time, or move to Delete with Tab, ← or → (which cycle only between Delete and Keep) and press Enter or Space
 **Then** `DELETE` is sent with both buttons `aria-disabled` while in flight; on success the list refetches, the row disappears, the row now in its position is selected, and "Deleted 'X'." is announced; there is no undo (FR6, UX-DR20, UX-DR22, UX-DR28)
 
+**Given** the API rejects a delete with `state_conflict` or `not_found`, or answers with a 5xx
+**When** the error comes back
+**Then** the envelope message (or "Something went wrong. Try again.") appears as written in an error toast with a 24×24 "Dismiss" close button; it is announced and stays until dismissed (NFR2, UX-DR15)
+
 **Given** an In progress or finished task is selected
-**When** I press ⌫ (or E on a finished task)
+**When** I press ⌫
 **Then** nothing happens and no request is sent (FR6, UX-DR21)
 
-**Note (reconcile F6, accepted):** a task's description is visible only inside the inline edit row; the list row shows no description and no indicator that one exists. This is a deliberate decision under SM-C1 (no extra features), not a gap to fill in this story.
-
-**Given** the edit row and delete confirm
-**When** they render at 400% zoom
-**Then** they reflow without horizontal scroll and every button is at least 24px high (UX-DR2, UX-DR30)
-**And** a Playwright test covers editing a task (only changed fields sent), deleting a task with a second ⌫ and with Tab to Delete + Enter, and a reflexive Enter keeping the task; a component test covers the edit row's single error slot (NFR6)
+**Given** the delete confirm
+**When** it renders at 400% zoom
+**Then** it reflows without horizontal scroll and every button is at least 24px high (UX-DR2, UX-DR30)
+**And** a Playwright test covers deleting a task with a second ⌫ and with Tab to Delete + Enter, and a reflexive Enter keeping the task (NFR6)
 
 ## Epic 3: Work through tasks to done, with a safety net
 
