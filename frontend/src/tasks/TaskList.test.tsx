@@ -4,7 +4,7 @@ import { NetworkError } from '@/api/errors';
 import { listTasksQueryKey } from '@/client/@tanstack/react-query.gen';
 import type { TaskResponse } from '@/client/types.gen';
 import { formatDue } from './formatDue';
-import { LOADING_DELAY_MS, TaskList } from './TaskList';
+import { GRID_INSTRUCTIONS, LOADING_DELAY_MS, TaskList } from './TaskList';
 import { createHarness, jsonResponse, task, tasksRequests, type Harness } from './testHarness';
 import { NOW_TICK_MS } from './useNow';
 
@@ -19,7 +19,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const rows = () => [...document.querySelectorAll<HTMLLIElement>('ul[aria-label="Tasks"] > li')];
+const grid = () => document.querySelector<HTMLDivElement>('[role="grid"][aria-label="Tasks"]');
+const rows = () => [...document.querySelectorAll<HTMLDivElement>('[role="grid"][aria-label="Tasks"] > [role="row"]')];
 const row = (title: string) => rows().find((r) => r.textContent?.includes(title))!;
 const status = () => document.querySelector('[role="status"]');
 
@@ -56,7 +57,7 @@ describe('task list', () => {
       'Sooner',
       'Middle',
     ]);
-    const list = document.querySelector('ul[aria-label="Tasks"]')!;
+    const list = grid()!;
     expect(list.className).toContain('rounded-lg');
     expect(list.className).toContain('border');
     expect(list.className).toContain('bg-card');
@@ -76,9 +77,9 @@ describe('task list', () => {
     const dueText = formatDue(new Date(due), new Date());
     expect(r.querySelector('[data-testid="task-due"]')!.textContent).toBe(dueText);
     expect(r.getAttribute('aria-label')).toBe(`Pack bags, To do, due ${dueText}`);
-    // Left to right: mark, title, due.
+    // Left to right: mark, title, due, then the (empty) actions cell.
     const order = [...r.querySelectorAll('[data-testid]')].map((e) => e.getAttribute('data-testid'));
-    expect(order).toEqual(['status-mark', 'task-title', 'task-due']);
+    expect(order).toEqual(['status-mark', 'task-title', 'task-due', 'row-actions']);
     expect(r.dataset.overdue).toBeUndefined();
     expect(r.textContent).not.toContain('Overdue');
   });
@@ -138,7 +139,7 @@ describe('task list', () => {
     serve([]);
     await renderLoaded();
 
-    expect(document.querySelector('ul')).toBeNull();
+    expect(grid()).toBeNull();
     const content = document.querySelector('[data-testid="task-list-content"]')!;
     expect(content.textContent).toContain('Nothing due. Enjoy the quiet.');
     expect(content.textContent).toContain('Type above when something comes up.');
@@ -305,5 +306,304 @@ describe('cold load', () => {
     );
     await advance(2 * LOADING_DELAY_MS);
     expect(document.body.textContent).not.toContain('Loading…');
+  });
+});
+
+describe('keyboard grid', () => {
+  let scrolled: { row: Element; options: unknown }[];
+
+  beforeEach(() => {
+    scrolled = [];
+    Element.prototype.scrollIntoView = function (this: Element, options?: unknown) {
+      scrolled.push({ row: this, options });
+    } as Element['scrollIntoView'];
+  });
+
+  afterEach(() => {
+    delete (Element.prototype as Partial<Element>).scrollIntoView;
+  });
+
+  const titles = () =>
+    rows().map((r) => r.querySelector('[data-testid="task-title"]')!.textContent);
+  const selectedTitle = () => {
+    const id = grid()!.getAttribute('aria-activedescendant');
+    return id === null ? null : document.getElementById(id)!.querySelector('[data-testid="task-title"]')!.textContent;
+  };
+
+  async function focusGrid(): Promise<void> {
+    await act(async () => grid()!.focus());
+  }
+
+  async function press(key: string, init: KeyboardEventInit = {}): Promise<KeyboardEvent> {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+    await act(async () => {
+      grid()!.dispatchEvent(event);
+    });
+    return event;
+  }
+
+  async function refetchWith(tasks: TaskResponse[]): Promise<void> {
+    serve(tasks);
+    await act(async () => {
+      await h.queryClient.invalidateQueries({ queryKey: listTasksQueryKey() });
+    });
+  }
+
+  const three = () => [task({ title: 'One' }), task({ title: 'Two' }), task({ title: 'Three' })];
+
+  it('is a single-Tab-stop grid of rows with two cells, described by the instructions', async () => {
+    serve(three());
+    await renderLoaded();
+
+    const g = grid()!;
+    expect(g.tabIndex).toBe(0);
+    expect(g.getAttribute('aria-label')).toBe('Tasks');
+    const described = document.getElementById(g.getAttribute('aria-describedby')!)!;
+    expect(described.textContent).toBe(
+      'Use arrow keys to move, S start, B move back, C complete, X cancel, E edit, Backspace delete, Z undo.',
+    );
+    expect(GRID_INSTRUCTIONS).toBe(described.textContent);
+    expect(described.className).toContain('sr-only');
+    expect(rows()).toHaveLength(3);
+    for (const r of rows()) {
+      const cells = r.querySelectorAll(':scope > [role="gridcell"]');
+      expect(cells).toHaveLength(2);
+      expect(cells[0].querySelector('[data-testid="task-title"]')).not.toBeNull();
+      expect(cells[0].querySelector('[data-testid="status-mark"]')).not.toBeNull();
+      expect(cells[1].textContent).toBe('');
+      expect(r.id).not.toBe('');
+      expect(r.getAttribute('aria-selected')).toBe('false');
+      expect(r.getAttribute('aria-label')).toMatch(/, To do, due /);
+    }
+    // Only the grid is focusable: one Tab stop.
+    expect(document.querySelectorAll('[tabindex]')).toHaveLength(1);
+    expect(g.getAttribute('aria-activedescendant')).toBeNull();
+  });
+
+  it('selects the first row on first focus, with the ring and tint', async () => {
+    serve(three());
+    await renderLoaded();
+    await focusGrid();
+
+    expect(selectedTitle()).toBe('One');
+    const first = rows()[0];
+    expect(grid()!.getAttribute('aria-activedescendant')).toBe(first.id);
+    expect(first.getAttribute('aria-selected')).toBe('true');
+    expect(first.className).toContain('bg-row-selected');
+    expect(first.className).toContain('row-ring');
+    expect(rows()[1].getAttribute('aria-selected')).toBe('false');
+    expect(rows()[1].className).not.toContain('row-ring');
+    expect(rows()[1].className).not.toContain('bg-row-selected');
+  });
+
+  it('moves with ↑/↓ and stops at the ends without wrapping', async () => {
+    serve(three());
+    await renderLoaded();
+    await focusGrid();
+
+    const up = await press('ArrowUp');
+    expect(up.defaultPrevented).toBe(true);
+    expect(selectedTitle()).toBe('One');
+    await press('ArrowDown');
+    expect(selectedTitle()).toBe('Two');
+    await press('ArrowDown');
+    expect(selectedTitle()).toBe('Three');
+    const down = await press('ArrowDown');
+    expect(down.defaultPrevented).toBe(true);
+    expect(selectedTitle()).toBe('Three');
+    await press('ArrowUp');
+    expect(selectedTitle()).toBe('Two');
+    expect(rows().filter((r) => r.getAttribute('aria-selected') === 'true')).toHaveLength(1);
+  });
+
+  it('ignores the later stories\' letter keys and Home/End', async () => {
+    serve(three());
+    await renderLoaded();
+    await focusGrid();
+    await press('ArrowDown');
+    for (const key of ['s', 'b', 'c', 'x', 'e', 'Backspace', 'z', 'Home', 'End', 'PageDown']) {
+      const event = await press(key);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(selectedTitle()).toBe('Two');
+    expect(titles()).toEqual(['One', 'Two', 'Three']);
+  });
+
+  it('selects a clicked row and focuses the grid', async () => {
+    serve(three());
+    await renderLoaded();
+    await act(async () => rows()[2].click());
+
+    expect(document.activeElement).toBe(grid());
+    expect(selectedTitle()).toBe('Three');
+    expect(rows()[2].className).toContain('row-ring');
+    expect(rows()[0].getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('selects on a primary press before the focus, so only the pressed row scrolls', async () => {
+    serve(three());
+    await renderLoaded();
+    await act(async () => {
+      rows()[2].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    });
+    await focusGrid();
+
+    expect(selectedTitle()).toBe('Three');
+    expect(scrolled.map((s) => s.row)).toEqual([rows()[2]]);
+  });
+
+  it('ignores a right or middle press', async () => {
+    serve(three());
+    await renderLoaded();
+    await focusGrid();
+    for (const button of [1, 2]) {
+      await act(async () => {
+        rows()[2].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button }));
+      });
+    }
+    expect(selectedTitle()).toBe('One');
+  });
+
+  it('leaves Shift+ArrowDown alone', async () => {
+    serve(three());
+    await renderLoaded();
+    await focusGrid();
+    const event = await press('ArrowDown', { shiftKey: true });
+    expect(event.defaultPrevented).toBe(false);
+    expect(selectedTitle()).toBe('One');
+  });
+
+  it('does not scroll while the grid is not focused, and scrolls when a refetch moves the row', async () => {
+    const [one, two, three_] = three();
+    serve([one, two, three_]);
+    await renderLoaded();
+    await focusGrid();
+    await press('ArrowDown');
+    expect(scrolled).toHaveLength(2);
+
+    await refetchWith([three_, one, two]);
+    await vi.waitFor(() => expect(titles()).toEqual(['Three', 'One', 'Two']));
+    expect(scrolled).toHaveLength(3);
+    expect(scrolled[2].row).toBe(rows()[2]);
+
+    await act(async () => grid()!.blur());
+    await refetchWith([one, three_]);
+    await vi.waitFor(() => expect(titles()).toEqual(['One', 'Three']));
+    expect(selectedTitle()).toBe('Three');
+    expect(scrolled).toHaveLength(3);
+  });
+
+  it('calls onEmptied when the focused grid empties, and not when it was not focused', async () => {
+    const onEmptied = vi.fn();
+    serve(three());
+    await h.render(<TaskList onEmptied={onEmptied} />);
+    await vi.waitFor(() => expect(grid()).not.toBeNull());
+    await focusGrid();
+    await refetchWith([]);
+    await vi.waitFor(() => expect(grid()).toBeNull());
+    expect(onEmptied).toHaveBeenCalledTimes(1);
+
+    await refetchWith(three());
+    await vi.waitFor(() => expect(grid()).not.toBeNull());
+    await refetchWith([]);
+    await vi.waitFor(() => expect(grid()).toBeNull());
+    expect(onEmptied).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps only the tint when the grid loses focus', async () => {
+    serve(three());
+    await renderLoaded();
+    await focusGrid();
+    await press('ArrowDown');
+    await act(async () => grid()!.blur());
+
+    const second = rows()[1];
+    expect(second.getAttribute('aria-selected')).toBe('true');
+    expect(second.className).toContain('bg-row-selected');
+    expect(second.className).not.toContain('row-ring');
+
+    await focusGrid();
+    expect(selectedTitle()).toBe('Two');
+    expect(rows()[1].className).toContain('row-ring');
+  });
+
+  it('keeps an overdue row\'s tint and rule when selected, adding the ring while focused', async () => {
+    serve([task({ title: 'Late', due_at: '2020-01-01T09:00:00Z', is_overdue: true }), task()]);
+    await renderLoaded();
+    await focusGrid();
+
+    const late = rows()[0];
+    expect(late.getAttribute('aria-selected')).toBe('true');
+    expect(late.className).toContain('bg-overdue-tint');
+    expect(late.className).toContain('shadow-[inset_3px_0_0_var(--overdue)]');
+    expect(late.className).toContain('row-ring');
+    expect(late.className).not.toContain('bg-row-selected');
+    expect(late.getAttribute('aria-label')).toMatch(/, overdue$/);
+
+    await act(async () => grid()!.blur());
+    expect(rows()[0].className).toContain('bg-overdue-tint');
+    expect(rows()[0].className).not.toContain('row-ring');
+  });
+
+  it('scrolls the selected row into view (block: nearest) on every selection change', async () => {
+    serve(three());
+    await renderLoaded();
+    await focusGrid();
+    expect(scrolled).toEqual([{ row: rows()[0], options: { block: 'nearest' } }]);
+    await press('ArrowDown');
+    await press('ArrowDown');
+    expect(scrolled.map((s) => s.row)).toEqual([rows()[0], rows()[1], rows()[2]]);
+    expect(scrolled.every((s) => (s.options as { block: string }).block === 'nearest')).toBe(true);
+    // Pressing into an end changes nothing, so nothing scrolls.
+    await press('ArrowDown');
+    expect(scrolled).toHaveLength(3);
+  });
+
+  it('follows the selected task by ID across a refetch that reorders the list', async () => {
+    const [one, two, three_] = three();
+    serve([one, two, three_]);
+    await renderLoaded();
+    await focusGrid();
+    await press('ArrowDown');
+    expect(selectedTitle()).toBe('Two');
+
+    await refetchWith([three_, one, two]);
+    await vi.waitFor(() => expect(titles()).toEqual(['Three', 'One', 'Two']));
+    expect(selectedTitle()).toBe('Two');
+    expect(rows()[2].getAttribute('aria-selected')).toBe('true');
+    // ↓ from the new position stops at the end.
+    await press('ArrowDown');
+    expect(selectedTitle()).toBe('Two');
+    await press('ArrowUp');
+    expect(selectedTitle()).toBe('One');
+  });
+
+  it('moves to the row at the old index when the selected task is gone, clamped to the list', async () => {
+    const [one, two, three_] = three();
+    serve([one, two, three_]);
+    await renderLoaded();
+    await focusGrid();
+    await press('ArrowDown');
+
+    await refetchWith([one, three_]);
+    await vi.waitFor(() => expect(titles()).toEqual(['One', 'Three']));
+    expect(selectedTitle()).toBe('Three');
+
+    await refetchWith([one]);
+    await vi.waitFor(() => expect(titles()).toEqual(['One']));
+    expect(selectedTitle()).toBe('One');
+    expect(rows()[0].getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('shows the selected row\'s full title, unclamped', async () => {
+    const long = 'A very long title '.repeat(11).trim();
+    serve([task({ title: long }), task({ title: long })]);
+    await renderLoaded();
+    await focusGrid();
+
+    const [selected, other] = rows().map((r) => r.querySelector('[data-testid="task-title"]')!);
+    expect(selected.className).not.toContain('line-clamp-2');
+    expect(other.className).toContain('line-clamp-2');
+    expect(selected.textContent).toBe(long);
   });
 });

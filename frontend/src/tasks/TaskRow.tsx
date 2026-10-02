@@ -34,57 +34,89 @@ export function rowLabel(task: TaskResponse, dueText: string, overdue: boolean):
 
 type Props = {
   task: TaskResponse;
+  /** The row's DOM id, which the grid's `aria-activedescendant` points at. */
+  id: string;
   /** The browser's current time, for the due text. */
   now: Date;
   /** Whether the row shows the overdue treatment (server or live promotion). */
   overdue: boolean;
+  /** Whether this is the grid's selected row. */
+  selected: boolean;
+  /** Whether the grid has focus: the selected row then carries the ring. */
+  focused: boolean;
+  /** Select this row (on press or click). */
+  onSelect: () => void;
 };
 
 /**
- * One task row (DESIGN.md Task row): status mark · title (clamped to two lines)
- * · optional overdue label · due time. The labels and due time wrap under the
- * title when the row is narrow. Class names are joined plainly, not with `cn()`,
- * because tailwind-merge would treat the custom `text-row-*` sizes as colours.
+ * One task row (DESIGN.md Task row) in the task grid: cell 1 holds the status
+ * mark, the title (clamped to two lines unless selected), the optional overdue
+ * label and the due time; cell 2 holds the row actions. The labels and due time
+ * wrap under the title when the row is narrow. Selected rows take the
+ * `row-selected` tint (overdue rows keep theirs) and, while the grid has focus,
+ * the 2px inset ring. Class names are joined plainly, not with `cn()`, because
+ * tailwind-merge would treat the custom `text-row-*` sizes as colours.
  */
-export function TaskRow({ task, now, overdue }: Props) {
+export function TaskRow({ task, id, now, overdue, selected, focused, onSelect }: Props) {
   const dueText = formatDue(new Date(task.due_at), now);
+  const background = overdue
+    ? 'bg-overdue-tint shadow-[inset_3px_0_0_var(--overdue)]'
+    : selected
+      ? 'bg-row-selected'
+      : 'bg-card';
   const rowClass = [
-    'flex min-h-row-min-height items-start gap-row-gap px-row-padding-x py-row-padding-y',
+    'flex min-h-row-min-height items-start px-row-padding-x py-row-padding-y',
     'border-t border-border first:border-t-0',
-    overdue ? 'bg-overdue-tint shadow-[inset_3px_0_0_var(--overdue)]' : 'bg-card',
-  ].join(' ');
+    background,
+    selected && focused ? 'row-ring' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <li
+    <div
+      role="row"
+      id={id}
+      aria-selected={selected}
       aria-label={rowLabel(task, dueText, overdue)}
       data-overdue={overdue || undefined}
+      data-selected={selected || undefined}
       className={rowClass}
+      // Select on press so the grid's focus (which follows) finds this row selected.
+      onMouseDown={(event) => {
+        if (event.button === 0) onSelect();
+      }}
+      onClick={onSelect}
     >
-      <span className={overdue ? 'text-overdue' : 'text-muted-foreground'}>
-        <EmptyCircle />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-row-gap">
-        <span
-          data-testid="task-title"
-          className="line-clamp-2 min-w-0 flex-[1_1_12rem] text-row-title wrap-anywhere text-foreground"
-        >
-          {task.title}
+      <div role="gridcell" className="flex min-w-0 flex-1 items-start gap-row-gap">
+        <span className={overdue ? 'text-overdue' : 'text-muted-foreground'}>
+          <EmptyCircle />
         </span>
-        <span className="flex min-w-0 flex-wrap items-center gap-x-row-gap">
-          {overdue && (
-            <span className="flex items-center gap-1 text-overdue-label text-overdue">
-              <CircleAlert aria-hidden="true" className="size-3.5 shrink-0" />
-              Overdue
-            </span>
-          )}
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-row-gap">
           <span
-            data-testid="task-due"
-            className={`text-row-meta ${overdue ? 'text-overdue' : 'text-muted-foreground'}`}
+            data-testid="task-title"
+            className={`${selected ? '' : 'line-clamp-2 '}min-w-0 flex-[1_1_12rem] text-row-title wrap-anywhere text-foreground`}
           >
-            {dueText}
+            {task.title}
           </span>
-        </span>
+          <span className="flex min-w-0 flex-wrap items-center gap-x-row-gap">
+            {overdue && (
+              <span className="flex items-center gap-1 text-overdue-label text-overdue">
+                <CircleAlert aria-hidden="true" className="size-3.5 shrink-0" />
+                Overdue
+              </span>
+            )}
+            <span
+              data-testid="task-due"
+              className={`text-row-meta ${overdue ? 'text-overdue' : 'text-muted-foreground'}`}
+            >
+              {dueText}
+            </span>
+          </span>
+        </div>
       </div>
-    </li>
+      {/* Row actions arrive with the edit and delete stories. */}
+      <div role="gridcell" data-testid="row-actions" className="shrink-0" />
+    </div>
   );
 }

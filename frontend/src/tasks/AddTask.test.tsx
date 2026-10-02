@@ -168,15 +168,36 @@ describe('add task: anatomy', () => {
     expect(input.getAttribute('aria-describedby')).toBeNull();
   });
 
-  it('shows the ⌘K hint unfocused and the Enter hint focused', async () => {
+  it.each([
+    ['MacIntel', '⌘K'],
+    ['Win32', 'Ctrl K'],
+    ['Linux x86_64', 'Ctrl K'],
+  ])('on %s shows the %s hint unfocused and the Enter hint focused', async (platform, hint) => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue(platform);
     await renderAddTask();
-    const hint = document.querySelector('[data-testid="kbd-hint"]')!;
-    expect(hint.getAttribute('aria-hidden')).toBe('true');
-    expect(hint.textContent).toBe('⌘K');
+    const kbd = document.querySelector('[data-testid="kbd-hint"]')!;
+    expect(kbd.getAttribute('aria-hidden')).toBe('true');
+    expect(kbd.textContent).toBe(hint);
     await focus(titleInput());
-    expect(hint.textContent).toBe('Enter');
+    expect(kbd.textContent).toBe('Enter');
     await act(async () => titleInput().blur());
-    expect(hint.textContent).toBe('⌘K');
+    expect(kbd.textContent).toBe(hint);
+  });
+
+  it('leaves an Esc that ends an IME composition alone', async () => {
+    await renderAddTask();
+    await focus(titleInput());
+    expect(await press(titleInput(), 'Escape', { isComposing: true })).toBe(true);
+    expect(document.activeElement).toBe(titleInput());
+  });
+
+  it('blurs the title on Esc when no one handles it, keeping the text', async () => {
+    await renderAddTask();
+    await focus(titleInput());
+    await type(titleInput(), 'Half typed');
+    expect(await press(titleInput(), 'Escape')).toBe(false);
+    expect(document.activeElement).not.toBe(titleInput());
+    expect(titleInput().value).toBe('Half typed');
   });
 
   it('keeps exactly one preset pressed', async () => {

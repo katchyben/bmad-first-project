@@ -7,7 +7,7 @@ import { client, configureClient } from '@/api/client';
 import { createQueryClient } from '@/api/queryClient';
 import { getToken, setToken } from '@/api/token';
 import App from '@/App';
-import { answerOthersWith, isTasksRequest } from '@/tasks/testHarness';
+import { answerOthersWith, isTasksRequest, jsonResponse, task } from '@/tasks/testHarness';
 import { formatHeadingDate } from './MainScreen';
 
 declare global {
@@ -141,6 +141,151 @@ describe('task list', () => {
     expect(tasksRequests[0][0].headers.get('Authorization')).toBe('Bearer stored');
     const header = document.querySelector('main > header')!;
     expect(header.nextElementSibling?.textContent).toContain('Nothing due. Enjoy the quiet.');
+  });
+});
+
+describe('keyboard', () => {
+  const addInput = () => document.querySelector<HTMLInputElement>('input[name="title"]')!;
+  const grid = () => document.querySelector<HTMLElement>('[role="grid"]');
+
+  function serveTasks(): void {
+    fetchMock.mockImplementation((r) =>
+      isTasksRequest(r)
+        ? Promise.resolve(jsonResponse([task({ title: 'First' }), task({ title: 'Second' })]))
+        : Promise.reject(new Error('unexpected request')),
+    );
+  }
+
+  async function keydown(target: EventTarget, init: KeyboardEventInit): Promise<KeyboardEvent> {
+    const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+    await act(async () => {
+      target.dispatchEvent(event);
+    });
+    return event;
+  }
+
+  it('⌘K on macOS focuses the add input from anywhere and prevents the default', async () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    serveTasks();
+    await renderApp();
+    await vi.waitFor(() => expect(grid()).not.toBeNull());
+    await act(async () => grid()!.focus());
+
+    const ctrl = await keydown(grid()!, { key: 'k', ctrlKey: true });
+    expect(ctrl.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(grid());
+
+    const meta = await keydown(grid()!, { key: 'k', metaKey: true });
+    expect(meta.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(addInput());
+
+    await act(async () => addInput().blur());
+    const fromBody = await keydown(document.body, { key: 'K', metaKey: true });
+    expect(fromBody.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(addInput());
+    expect(document.querySelector('[data-testid="kbd-hint"]')!.textContent).toBe('Enter');
+  });
+
+  it('Ctrl+K off macOS focuses the add input and prevents the default; ⌘K does not', async () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
+    await renderApp();
+    await vi.waitFor(() => expect(addInput()).not.toBeNull());
+    expect(document.querySelector('[data-testid="kbd-hint"]')!.textContent).toBe('Ctrl K');
+
+    const meta = await keydown(document.body, { key: 'k', metaKey: true });
+    expect(meta.defaultPrevented).toBe(false);
+    expect(document.activeElement).not.toBe(addInput());
+
+    const plain = await keydown(document.body, { key: 'k' });
+    expect(plain.defaultPrevented).toBe(false);
+
+    const ctrl = await keydown(document.body, { key: 'k', ctrlKey: true });
+    expect(ctrl.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(addInput());
+  });
+
+  it('Esc in the add input moves focus to the task grid, which selects its first row', async () => {
+    serveTasks();
+    await renderApp();
+    await vi.waitFor(() => expect(grid()).not.toBeNull());
+    await act(async () => addInput().focus());
+
+    const esc = await keydown(addInput(), { key: 'Escape' });
+    expect(esc.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(grid());
+    const selected = document.getElementById(grid()!.getAttribute('aria-activedescendant')!)!;
+    expect(selected.textContent).toContain('First');
+  });
+
+  it.each([
+    ['MacIntel', 'metaKey'],
+    ['Win32', 'ctrlKey'],
+  ] as const)('on %s ignores the shortcut with Shift or Alt, composing, or already handled', async (platform, mod) => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue(platform);
+    await renderApp();
+    await vi.waitFor(() => expect(addInput()).not.toBeNull());
+    for (const extra of [{ shiftKey: true }, { altKey: true }, { isComposing: true }]) {
+      const event = await keydown(document.body, { key: 'k', [mod]: true, ...extra });
+      expect(event.defaultPrevented).toBe(false);
+      expect(document.activeElement).not.toBe(addInput());
+    }
+    const handled = new KeyboardEvent('keydown', { key: 'k', [mod]: true, bubbles: true, cancelable: true });
+    handled.preventDefault();
+    await act(async () => {
+      document.body.dispatchEvent(handled);
+    });
+    expect(document.activeElement).not.toBe(addInput());
+  });
+
+  it('leaves focus in an open dialog, such as the due popover', async () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    await renderApp();
+    await vi.waitFor(() => expect(addInput()).not.toBeNull());
+    const pick = [...document.querySelectorAll('button')].find((b) => b.textContent?.includes('Pick date'))!;
+    await act(async () => pick.click());
+    const dialog = await vi.waitFor(() => {
+      const d = document.querySelector<HTMLElement>('[role="dialog"]');
+      expect(d).not.toBeNull();
+      return d!;
+    });
+    await vi.waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+    const inside = document.activeElement!;
+
+    const event = await keydown(inside, { key: 'k', ctrlKey: true });
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(inside);
+  });
+
+  it('moves focus to the add input when the focused list becomes empty', async () => {
+    serveTasks();
+    await renderApp();
+    await vi.waitFor(() => expect(grid()).not.toBeNull());
+    await act(async () => grid()!.focus());
+    answerOthersWith(fetchMock, () => Promise.reject(new Error('unexpected request')));
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    await vi.waitFor(() => expect(grid()).toBeNull());
+    expect(document.activeElement).toBe(addInput());
+  });
+
+  it('Esc in the add input just blurs it when there are no tasks', async () => {
+    await renderApp();
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('Nothing due. Enjoy the quiet.'),
+    );
+    await act(async () => addInput().focus());
+    await keydown(addInput(), { key: 'Escape' });
+    expect(grid()).toBeNull();
+    expect(document.activeElement).not.toBe(addInput());
   });
 });
 

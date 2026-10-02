@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useAnnounce } from '@/a11y/announce';
 import { errorMessage, isEnvelopeError } from '@/api/errors';
 import { createTaskMutation, listTasksQueryKey } from '@/client/@tanstack/react-query.gen';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { addShortcutHint, isMacPlatform } from '@/lib/platform';
 import { chipClass } from './chipClass';
 import { DuePicker } from './DuePicker';
 import { formatDue } from './formatDue';
@@ -39,6 +40,15 @@ const DEFAULT_DUE: Due = { kind: 'preset', preset: DEFAULT_PRESET };
 
 type Fields = { title: string; due: Due; description: string };
 
+type Props = {
+  /** The title input, for a caller that focuses it (the ⌘K shortcut). */
+  titleRef?: RefObject<HTMLInputElement | null>;
+  /** Esc in the title input; without it, Esc just blurs the input. */
+  onEscape?: () => void;
+  /** Whether the shortcut hint shows ⌘K (macOS) or Ctrl K. Detected when omitted. */
+  mac?: boolean;
+};
+
 /**
  * The add-task input (DESIGN.md Components > Add-task input, Preset chip, Add
  * description link): a title field, the preset chips beneath it, and an "Add
@@ -47,7 +57,7 @@ type Fields = { title: string; due: Due; description: string };
  * The API decides every rule: its envelope message shows as written in the one
  * error slot, and everything typed is kept.
  */
-export function AddTask() {
+export function AddTask({ titleRef: externalTitleRef, onEscape, mac: macProp }: Props = {}) {
   const id = useId();
   const titleId = `${id}-title`;
   const descriptionId = `${id}-description`;
@@ -59,7 +69,10 @@ export function AddTask() {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [titleFocused, setTitleFocused] = useState(false);
-  const titleRef = useRef<HTMLInputElement>(null);
+  const ownTitleRef = useRef<HTMLInputElement>(null);
+  const titleRef = externalTitleRef ?? ownTitleRef;
+  const [detectedMac] = useState(isMacPlatform);
+  const mac = macProp ?? detectedMac;
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   // What was sent, and what the fields hold now: a success resets only the
@@ -136,6 +149,14 @@ export function AddTask() {
   }
 
   function onTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape') {
+      // An Esc that cancels an IME composition belongs to the IME.
+      if (event.nativeEvent.isComposing) return;
+      event.preventDefault();
+      if (onEscape) onEscape();
+      else event.currentTarget.blur();
+      return;
+    }
     if (!isSubmitEnter(event)) return;
     event.preventDefault();
     submit();
@@ -199,7 +220,7 @@ export function AddTask() {
           data-testid="kbd-hint"
           className="pointer-events-none absolute top-1/2 right-add-input-padding-x -translate-y-1/2 rounded-xs border border-b-2 border-border bg-card px-1 text-kbd text-muted-foreground"
         >
-          {titleFocused ? 'Enter' : '⌘K'}
+          {titleFocused ? 'Enter' : addShortcutHint(mac)}
         </kbd>
       </div>
       <p

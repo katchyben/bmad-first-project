@@ -74,3 +74,10 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-5a-show-my-tasks-on-the-main-screen.md`
   summary: `frontend/src/tasks/overdue.ts::isShownOverdue` trusts a server `is_overdue: true` before checking status, so with the 2.1b server gap a finished past-due task would render overdue. Fix both sides together when Epic 3 makes tasks finishable (finished is never overdue).
   evidence: `isShownOverdue` returns early on `task.is_overdue`. This pairs with the 2.1b `view_task` entry. Unreachable until Epic 3.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-5d-move-through-my-tasks-with-the-keyboard.md`
+  summary: Design question. A selected overdue row has no visible selection cue while the grid is blurred, because DESIGN.md has overdue rows keep their tint and blurred selection show "tint only". Decide on a cue (for example a selected variant of `overdue-tint`) before 2.6's row actions make blurred selection matter.
+  evidence: `TaskRow.tsx` applies `bg-overdue-tint` over `row-selected`, and `row-ring` only with focus. Raised by the implementer and Blind Hunter (2.5d).
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-5d-move-through-my-tasks-with-the-keyboard.md`
+  summary: Verify the task grid with real screen readers (VoiceOver, NVDA, JAWS). `aria-activedescendant` points at `role="row"` elements in a non-tree `grid`, which some AT announces poorly; if so, point at the first gridcell or switch to `listbox`/`option`.
+  evidence: Blind Hunter (2.5d), unverified. The APG grid pattern puts focus on cells.

@@ -237,6 +237,16 @@
   }
 }
 
+/*
+ * The selected task row's ring while the task grid has focus: the same 2px
+ * `ring` as the focus ring, drawn inset so it sits inside the row and combines
+ * with the overdue rule (a box-shadow).
+ */
+@utility row-ring {
+  outline: var(--ring-width) solid var(--ring);
+  outline-offset: calc(var(--ring-width) * -1);
+}
+
 /* Every interactive target is at least 24px (WCAG 2.5.8). */
 @utility min-target {
   min-height: var(--min-target);

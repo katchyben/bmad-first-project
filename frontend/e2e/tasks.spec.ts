@@ -36,7 +36,8 @@ async function createTask(page: Page, token: string, title: string, dueAt: strin
   expect(response.status()).toBe(201);
 }
 
-const rows = (page: Page) => page.getByRole('list', { name: 'Tasks' }).getByRole('listitem');
+const grid = (page: Page) => page.getByRole('grid', { name: 'Tasks' });
+const rows = (page: Page) => grid(page).getByRole('row');
 
 test('the main screen lists tasks in API order with their due text', async ({ page }) => {
   const token = await logIn(page);
@@ -291,4 +292,73 @@ test('narrow: at 320px the due popover fits with 24px targets', async ({ page })
   for (const target of targets) {
     expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(24);
   }
+});
+
+/** The id of the row the grid's aria-activedescendant points at. */
+const activeRowId = (page: Page) => grid(page).getAttribute('aria-activedescendant');
+
+test('moves through the tasks with the keyboard, and ⌘K / Esc move between input and list', async ({
+  page,
+}) => {
+  const token = await logIn(page);
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await createTask(page, token, `Keyboard A ${suffix}`, await localDue(page, 1, 9));
+  await createTask(page, token, `Keyboard B ${suffix}`, await localDue(page, 1, 10));
+  await page.reload();
+  await expect(rows(page).filter({ hasText: `Keyboard B ${suffix}` })).toBeVisible();
+
+  // Tab from the last control of the add form lands on the grid: one Tab stop.
+  await page.getByRole('button', { name: 'Add description' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(grid(page)).toBeFocused();
+  await expect(grid(page)).toHaveAccessibleDescription(
+    'Use arrow keys to move, S start, B move back, C complete, X cancel, E edit, Backspace delete, Z undo.',
+  );
+  const ids = await rows(page).evaluateAll((els) => els.map((el) => el.id));
+  expect(ids.length).toBeGreaterThanOrEqual(2);
+  await expect(grid(page)).toHaveAttribute('aria-activedescendant', ids[0]);
+  const first = rows(page).first();
+  await expect(first).toHaveAttribute('aria-selected', 'true');
+  // The 2px inset ring while focused.
+  await expect(first).toHaveCSS('outline-width', '2px');
+  await expect(first).toHaveCSS('outline-offset', '-2px');
+
+  // ↑ at the top stays put; ↓ moves one row.
+  await page.keyboard.press('ArrowUp');
+  await expect(grid(page)).toHaveAttribute('aria-activedescendant', ids[0]);
+  await page.keyboard.press('ArrowDown');
+  await expect(grid(page)).toHaveAttribute('aria-activedescendant', ids[1]);
+  await expect(rows(page).nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(first).toHaveAttribute('aria-selected', 'false');
+
+  // ↓ past the end stops on the last row, without wrapping to the first.
+  for (let i = 0; i < ids.length + 2; i++) await page.keyboard.press('ArrowDown');
+  await expect(grid(page)).toHaveAttribute('aria-activedescendant', ids[ids.length - 1]);
+  await expect(grid(page)).toBeFocused();
+  await expect(rows(page).last()).toBeInViewport();
+
+  // ⌘K (Ctrl+K off macOS) focuses the add input; Esc there returns to the list.
+  // The app picks the modifier from the platform the browser reports (the
+  // Desktop Chrome device may report another OS than the runner's).
+  const mac = await page.evaluate(() => {
+    const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+    return /mac|iphone|ipad|ipod/i.test(nav.userAgentData?.platform || nav.platform || '');
+  });
+  await page.keyboard.press(mac ? 'Meta+k' : 'Control+k');
+  await expect(addInput(page)).toBeFocused();
+  // The list kept its selection, now shown by the tint only.
+  await expect(rows(page).last()).toHaveAttribute('aria-selected', 'true');
+  await expect(rows(page).last()).toHaveCSS('outline-style', 'none');
+  await page.keyboard.press('Escape');
+  await expect(grid(page)).toBeFocused();
+  expect(await activeRowId(page)).toBe(ids[ids.length - 1]);
+
+  // Clicking a row selects it and focuses the list.
+  await addInput(page).focus();
+  await rows(page).filter({ hasText: `Keyboard A ${suffix}` }).click();
+  await expect(grid(page)).toBeFocused();
+  await expect(rows(page).filter({ hasText: `Keyboard A ${suffix}` })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
 });

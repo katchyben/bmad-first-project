@@ -1,8 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { clearToken, getToken } from '@/api/token';
 import { logoutMutation } from '@/client/@tanstack/react-query.gen';
 import { Button } from '@/components/ui/button';
+import { isAddShortcut, isMacPlatform } from '@/lib/platform';
 import { AddTask } from '@/tasks/AddTask';
 import { TaskList } from '@/tasks/TaskList';
 
@@ -28,9 +29,33 @@ export function MainScreen() {
   // has nothing to tell the user, so it skips the global error toast.
   const logout = useMutation({ ...logoutMutation(), meta: { globalErrorToast: false } });
 
+  const addInputRef = useRef<HTMLInputElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  // Detected once: ⌘ on macOS, Ctrl elsewhere.
+  const [mac] = useState(isMacPlatform);
+
   useEffect(() => {
     document.title = 'Today — Todo';
   }, []);
+
+  // ⌘K / Ctrl+K from anywhere on the main screen focuses the add input.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.isComposing || event.defaultPrevented || !isAddShortcut(event, mac)) return;
+      // A dialog or popover (the due picker) keeps focus while it is open.
+      if (document.activeElement?.closest('[role="dialog"]')) return;
+      event.preventDefault();
+      addInputRef.current?.focus();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mac]);
+
+  /** Esc in the add input moves focus to the task grid, or just blurs with no tasks. */
+  function leaveAddInput() {
+    if (gridRef.current) gridRef.current.focus();
+    else addInputRef.current?.blur();
+  }
 
   /**
    * End the session here and now, whatever the server says or however long it
@@ -66,9 +91,9 @@ export function MainScreen() {
       </header>
       {/* The status filter tabs (Epic 3) will sit between the header and the input. */}
       <div className="mt-heading-to-filter pb-12">
-        <AddTask />
+        <AddTask titleRef={addInputRef} onEscape={leaveAddInput} mac={mac} />
         <div className="mt-input-to-list">
-          <TaskList />
+          <TaskList gridRef={gridRef} onEmptied={() => addInputRef.current?.focus()} />
         </div>
       </div>
     </main>
