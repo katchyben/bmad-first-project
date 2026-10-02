@@ -33,7 +33,7 @@ def create_or_update_account(
     username: str,
     password: str,
 ) -> AccountResult:
-    """Create the one account, or set a new password on it.
+    """Create the one account, or set a new password on it, and end every session.
 
     `uow` must be active. If an account exists under another username, nothing
     is written and `StateConflictError` is raised. `now` is unused for now: the
@@ -48,10 +48,12 @@ def create_or_update_account(
         uow.accounts.add(
             Account(username=username, password_hash=hasher.hash(password))
         )
+        uow.sessions.delete_all()
         return AccountResult(AccountChange.CREATED, username)
     if existing.username != username:
         raise StateConflictError(
             f"An account already exists for '{existing.username}'."
         )
     uow.accounts.save(replace(existing, password_hash=hasher.hash(password)))
+    uow.sessions.delete_all()
     return AccountResult(AccountChange.UPDATED, username)

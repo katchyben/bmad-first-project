@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
+import pytest
 from fastapi import APIRouter, FastAPI
 from fastapi.testclient import TestClient
 
@@ -25,10 +26,10 @@ def _schema(app: FastAPI) -> dict[str, Any]:
     return response.json()
 
 
-def test_bare_app_publishes_error_schemas(make_app: MakeApp) -> None:
+def test_app_publishes_error_schemas(make_app: MakeApp) -> None:
     schemas = _schema(make_app())["components"]["schemas"]
 
-    assert set(schemas) == {"ErrorResponse", "ErrorBody"}
+    assert {"ErrorResponse", "ErrorBody"} <= set(schemas)
     assert schemas["ErrorResponse"]["properties"]["error"] == {
         "$ref": "#/components/schemas/ErrorBody"
     }
@@ -83,4 +84,78 @@ def test_included_router_routes_inherit_the_contract(make_app: MakeApp) -> None:
     assert operation["operationId"] == "archive_thing"
     assert operation["responses"]["422"]["content"]["application/json"] == {
         "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+    }
+
+
+def duplicate_operation_ids(schema: dict[str, Any]) -> list[str]:
+    """Every operation ID used by more than one operation, sorted."""
+    seen: dict[str, int] = {}
+    for path_item in schema["paths"].values():
+        for operation in path_item.values():
+            if isinstance(operation, dict) and "operationId" in operation:
+                seen[operation["operationId"]] = (
+                    seen.get(operation["operationId"], 0) + 1
+                )
+    return sorted(op_id for op_id, count in seen.items() if count > 1)
+
+
+def test_operation_ids_are_unique(make_app: MakeApp) -> None:
+    schema = _schema(make_app())
+
+    assert schema["paths"]
+    assert duplicate_operation_ids(schema) == []
+
+
+def test_duplicate_operation_ids_are_detected(make_app: MakeApp) -> None:
+    app = make_app()
+
+    def login() -> None: ...
+
+    app.add_api_route("/_test/also-login", login, methods=["POST"])
+
+    with pytest.warns(UserWarning, match="Duplicate Operation ID login"):
+        schema = app.openapi()
+
+    assert duplicate_operation_ids(schema) == ["login"]
+
+
+@pytest.mark.parametrize(
+    ("path", "operation_id"),
+    [("/api/auth/token", "login"), ("/api/auth/logout", "logout")],
+)
+def test_auth_routes_declare_their_401_as_the_envelope(
+    make_app: MakeApp, path: str, operation_id: str
+) -> None:
+    operation = _schema(make_app())["paths"][path]["post"]
+
+    assert operation["operationId"] == operation_id
+    for status in ("401", "422"):
+        assert operation["responses"][status]["content"]["application/json"] == {
+            "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+        }
+
+
+def test_login_takes_the_password_form_and_returns_a_token(
+    make_app: MakeApp,
+) -> None:
+    schema = _schema(make_app())
+    operation = schema["paths"]["/api/auth/token"]["post"]
+
+    assert "application/x-www-form-urlencoded" in operation["requestBody"]["content"]
+    assert operation["responses"]["200"]["content"]["application/json"] == {
+        "schema": {"$ref": "#/components/schemas/TokenResponse"}
+    }
+    token = schema["components"]["schemas"]["TokenResponse"]
+    assert set(token["properties"]) == {"access_token", "token_type"}
+
+
+def test_logout_is_bearer_protected_and_has_no_body(make_app: MakeApp) -> None:
+    schema = _schema(make_app())
+    operation = schema["paths"]["/api/auth/logout"]["post"]
+
+    assert operation["security"] == [{"OAuth2PasswordBearer": []}]
+    assert "content" not in operation["responses"]["204"]
+    assert schema["components"]["securitySchemes"]["OAuth2PasswordBearer"] == {
+        "type": "oauth2",
+        "flows": {"password": {"scopes": {}, "tokenUrl": "/api/auth/token"}},
     }

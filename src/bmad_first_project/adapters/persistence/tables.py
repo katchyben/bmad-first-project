@@ -4,7 +4,11 @@ The constraint naming convention is set before any table is defined, so every
 constraint has a stable name that SQLite batch migrations can refer to.
 """
 
+from datetime import datetime
+
 from sqlmodel import Field, SQLModel
+
+from bmad_first_project.adapters.persistence.types import UTCDateTime
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -24,3 +28,12 @@ class AccountRow(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     username: str = Field(unique=True)
     password_hash: str
+
+
+class SessionRow(SQLModel, table=True):
+    __tablename__ = "sessions"
+
+    id: int | None = Field(default=None, primary_key=True)
+    token_hash: str = Field(unique=True)
+    account_id: int = Field(foreign_key="account.id", ondelete="CASCADE")
+    expires_at: datetime = Field(sa_type=UTCDateTime)

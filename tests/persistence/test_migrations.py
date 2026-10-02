@@ -39,7 +39,11 @@ def test_upgrade_creates_missing_directory_and_reaches_head(
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version"))
         assert version.scalar_one() == _head()
-    assert set(inspect(engine).get_table_names()) == {"alembic_version", "account"}
+    assert set(inspect(engine).get_table_names()) == {
+        "alembic_version",
+        "account",
+        "sessions",
+    }
     assert_schema_current(engine)
 
 

@@ -268,3 +268,43 @@ def test_console_script_resolves_to_create_account() -> None:
 
     assert entry_point.value == "bmad_first_project.cli:create_account"
     assert entry_point.load() is cli.create_account
+
+
+def _session_count(engine: Engine) -> int:
+    with engine.connect() as connection:
+        return connection.execute(text("SELECT count(*) FROM sessions")).scalar_one()
+
+
+def _add_session(engine: Engine, token_hash: str) -> None:
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO sessions (token_hash, account_id, expires_at) "
+                "VALUES (:h, 1, '2026-10-08 00:00:00.000000')"
+            ),
+            {"h": token_hash},
+        )
+
+
+def test_rerun_deletes_every_session(
+    run_cli: Callable[..., Result], migrated_engine: Engine
+) -> None:
+    run_cli("benny", "s3cret")
+    _add_session(migrated_engine, "a" * 64)
+    _add_session(migrated_engine, "b" * 64)
+
+    assert run_cli("benny", "n3w-pass").code == 0
+
+    assert _session_count(migrated_engine) == 0
+
+
+def test_failed_run_keeps_sessions(
+    run_cli: Callable[..., Result], migrated_engine: Engine
+) -> None:
+    run_cli("benny", "s3cret")
+    _add_session(migrated_engine, "a" * 64)
+
+    assert run_cli("alice", "n3w-pass").code == 1
+    assert run_cli("benny", "n3w-pass", "mismatch").code == 1
+
+    assert _session_count(migrated_engine) == 1

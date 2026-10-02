@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from pydantic.json_schema import SkipJsonSchema
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from bmad_first_project.application.auth import LOGIN_REQUIRED_MESSAGE
 from bmad_first_project.domain.errors import (
     DomainError,
     DomainValidationError,
@@ -31,7 +32,6 @@ from bmad_first_project.domain.errors import (
 VALIDATION_MESSAGE = "Some details aren't valid. Check them and try again."
 NOT_FOUND_MESSAGE = "There's nothing here."
 METHOD_NOT_ALLOWED_MESSAGE = "That action isn't available here."
-UNAUTHENTICATED_MESSAGE = "Log in to continue."
 HTTP_ERROR_MESSAGE = "That request couldn't be completed."
 
 _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str]] = {
@@ -42,7 +42,7 @@ _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str]] = {
 }
 
 _FRAMEWORK_ERRORS: dict[int, tuple[str, str]] = {
-    401: ("unauthenticated", UNAUTHENTICATED_MESSAGE),
+    401: ("unauthenticated", LOGIN_REQUIRED_MESSAGE),
     404: ("not_found", NOT_FOUND_MESSAGE),
     405: ("method_not_allowed", METHOD_NOT_ALLOWED_MESSAGE),
 }
@@ -59,8 +59,13 @@ class ErrorResponse(BaseModel):
     error: ErrorBody
 
 
+def error_responses(*status_codes: int) -> dict[int | str, dict[str, Any]]:
+    """OpenAPI `responses` declaring each status code's body as `ErrorResponse`."""
+    return {status_code: {"model": ErrorResponse} for status_code in status_codes}
+
+
 # Every route documents its 422 as the envelope, not FastAPI's HTTPValidationError.
-ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {422: {"model": ErrorResponse}}
+ERROR_RESPONSES: dict[int | str, dict[str, Any]] = error_responses(422)
 
 
 def _envelope(
@@ -78,8 +83,10 @@ def _envelope(
     )
 
 
-async def _handle_domain_error(_: Request, exc: Exception) -> JSONResponse:
-    assert isinstance(exc, DomainError)
+def domain_error_response(
+    exc: DomainError, extra_headers: dict[str, str] | None = None
+) -> JSONResponse:
+    """The envelope response for a domain error, plus any `extra_headers`."""
     status_code, code = next(
         mapping
         for error_type, mapping in _DOMAIN_ERRORS.items()
@@ -87,11 +94,15 @@ async def _handle_domain_error(_: Request, exc: Exception) -> JSONResponse:
     )
     reason = (exc.reason or None) if isinstance(exc, StateConflictError) else None
     headers = (
-        {"WWW-Authenticate": "Bearer"}
-        if isinstance(exc, UnauthenticatedError)
-        else None
+        {"WWW-Authenticate": "Bearer"} if isinstance(exc, UnauthenticatedError) else {}
     )
-    return _envelope(status_code, code, exc.message, reason, headers)
+    headers.update(extra_headers or {})
+    return _envelope(status_code, code, exc.message, reason, headers or None)
+
+
+async def _handle_domain_error(_: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, DomainError)
+    return domain_error_response(exc)
 
 
 async def _handle_request_validation(_: Request, __: Exception) -> JSONResponse:

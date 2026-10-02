@@ -7,6 +7,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from bmad_first_project.adapters.persistence.accounts import SqlAccountStore
+from bmad_first_project.adapters.persistence.sessions import SqlSessionStore
 
 
 class SqlUnitOfWork:
@@ -16,6 +17,7 @@ class SqlUnitOfWork:
         self._engine = engine
         self._session: Session | None = None
         self._accounts: SqlAccountStore | None = None
+        self._sessions: SqlSessionStore | None = None
 
     @property
     def session(self) -> Session:
@@ -31,11 +33,19 @@ class SqlUnitOfWork:
             raise RuntimeError("SqlUnitOfWork is not active; use it in a `with` block.")
         return self._accounts
 
+    @property
+    def sessions(self) -> SqlSessionStore:
+        """The session store, bound to this unit of work's session."""
+        if self._sessions is None:
+            raise RuntimeError("SqlUnitOfWork is not active; use it in a `with` block.")
+        return self._sessions
+
     def __enter__(self) -> Self:
         if self._session is not None:
             raise RuntimeError("SqlUnitOfWork is already active.")
         self._session = Session(self._engine)
         self._accounts = SqlAccountStore(self._session)
+        self._sessions = SqlSessionStore(self._session)
         return self
 
     def __exit__(
@@ -56,3 +66,4 @@ class SqlUnitOfWork:
             finally:
                 self._session = None
                 self._accounts = None
+                self._sessions = None

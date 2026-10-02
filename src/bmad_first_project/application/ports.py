@@ -5,6 +5,7 @@ from types import TracebackType
 from typing import Protocol, Self
 
 from bmad_first_project.domain.account import Account
+from bmad_first_project.domain.session import UserSession
 
 
 class Clock(Protocol):
@@ -35,6 +36,22 @@ class AccountStore(Protocol):
         ...
 
 
+class SessionStore(Protocol):
+    """Login sessions, looked up by token hash. Never commits; the unit of work does."""
+
+    def add(self, session: UserSession) -> None: ...
+
+    def get(self, token_hash: str) -> UserSession | None:
+        """The session with this token hash, or None when there is none."""
+        ...
+
+    def delete(self, token_hash: str) -> None:
+        """Delete the session with this token hash, if it exists."""
+        ...
+
+    def delete_all(self) -> None: ...
+
+
 class UnitOfWork(Protocol):
     """One transaction, used as a context manager.
 
@@ -45,6 +62,9 @@ class UnitOfWork(Protocol):
 
     @property
     def accounts(self) -> AccountStore: ...
+
+    @property
+    def sessions(self) -> SessionStore: ...
 
     def __enter__(self) -> Self: ...
 

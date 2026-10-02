@@ -110,4 +110,4 @@ def test_models_match_migrations(migrated_engine: Engine) -> None:
         diff = compare_metadata(MigrationContext.configure(connection), tables.metadata)
 
     assert diff == []
-    assert "account" in tables.metadata.tables
+    assert {"account", "sessions"} <= set(tables.metadata.tables)

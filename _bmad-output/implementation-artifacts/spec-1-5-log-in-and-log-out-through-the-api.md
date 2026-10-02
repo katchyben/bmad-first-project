@@ -2,9 +2,10 @@
 title: 'Story 1.5a: Log in and log out through the API'
 type: 'feature'
 created: '2026-10-02'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: '0e06aecf04ef0899a8c3e6594c297c451a93a4a8'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
 ---
@@ -61,11 +62,11 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/bmad_first_project/domain/session.py` -- `SESSION_LIFETIME`, the validity rule -- FR2
-- [ ] `src/bmad_first_project/application/{ports.py,auth.py,accounts.py}` -- `SessionStore`; `login`, `authenticate`, `logout`; session deletion in `create_or_update_account` -- FR1–FR3, AR6
-- [ ] `src/bmad_first_project/adapters/persistence/{tables.py,sessions.py,unit_of_work.py}`, `alembic/env.py`, `alembic/versions/0003_sessions.py` -- the table, store, UoW wiring, FK-off migrations -- AR4, AR5, AR6
-- [ ] `src/bmad_first_project/adapters/http/{auth.py,dependencies.py,errors.py}`, `main.py` -- routes, the auth dependency alias, `error_responses` -- AR6, AR12, AR14
-- [ ] `tests/...` -- every matrix row, operation-ID uniqueness, and model/migration sync including sessions -- NFR6
+- [x] `src/bmad_first_project/domain/session.py` -- `SESSION_LIFETIME`, the validity rule -- FR2
+- [x] `src/bmad_first_project/application/{ports.py,auth.py,accounts.py}` -- `SessionStore`; `login`, `authenticate`, `logout`; session deletion in `create_or_update_account` -- FR1–FR3, AR6
+- [x] `src/bmad_first_project/adapters/persistence/{tables.py,sessions.py,unit_of_work.py}`, `alembic/env.py`, `alembic/versions/0003_sessions.py` -- the table, store, UoW wiring, FK-off migrations -- AR4, AR5, AR6
+- [x] `src/bmad_first_project/adapters/http/{auth.py,dependencies.py,errors.py}`, `main.py` -- routes, the auth dependency alias, `error_responses` -- AR6, AR12, AR14
+- [x] `tests/...` -- every matrix row, operation-ID uniqueness, and model/migration sync including sessions -- NFR6
 
 **Acceptance Criteria:**
 - Given the repo, when `uv run ruff check .`, `uv run ruff format --check .` and `uv run pytest` run, then all pass, including the boundary and commit-rule tests.
@@ -75,6 +76,25 @@ context:
 ## Spec Change Log
 
 ## Review Triage Log
+
+Pass 1 (blind = B, edge-case = E, verification-gap = V):
+
+| # | Finding | Verdict | Evidence | Route |
+|---|---------|---------|----------|-------|
+| B1/E1/V | `PRAGMA foreign_key_check` runs after `begin_transaction()` committed, so a violation leaves the DB stamped at head with broken rows, and `assert_schema_current` passes | high | `env.py`: the check sits after the `with context.begin_transaction():` block; the test only asserts that it raised | patch |
+| E2 | Pre-existing orphan rows make every later upgrade fail with "the migration left rows…" | low | The check covers the whole DB; the app runs with FKs on, so orphans shouldn't arise; reword the message (a direct correction) | patch |
+| B2 | "Log in to continue." is defined twice (`application/auth.py` and `adapters/http/errors.py`) | low | They can drift; a direct fix: the HTTP adapter imports the application constant | patch |
+| B3 | The token response lacks `Cache-Control: no-store` / `Pragma: no-cache` | medium | RFC 6749 §5.1 requires them on responses carrying an access token | patch |
+| B4/E3 | Expired sessions are never deleted | low | One row per login without logout for a single user; cleanup is worth doing later | defer |
+| B5 | Unknown-user path calls `hash()` while the known-user path calls `verify()` | low | Extra hardening beyond the spec; close enough for a local single-user app | reject |
+| B6/E4 | A corrupt stored hash makes `verify` raise → 500 | false | Only this app's Argon2 hasher writes hashes (1.4 E11) | reject |
+| B7 | No index on `sessions.account_id` | low | A tiny table; the cascade scan is negligible | reject |
+| B8 | Error-schema test weakened to a subset; auto-named `Body_login` | low | V: `HTTPValidationError`/`ValidationError` absence is still asserted; the component name is cosmetic | reject |
+| B9 | Logout advertises a 422 it can't return | low | App-wide 422 default from 1.1c (same verdict as 1.1c) | reject |
+| B10 | A 110-character docstring line in `main.py` | false | `E501` isn't in the configured Ruff rules; `ruff check` passes | reject |
+| B11 | No direct assertion that FKs are off inside migrations | low | `test_batch_rebuild_of_a_parent_keeps_child_rows` fails without the listener | reject |
+| B12 | The leak test doesn't cover the 422 login path | false | The request-validation handler returns one fixed message, so it can't echo form input (1.1b) | reject |
+| E5 | A login racing a `create-account` password reset can mint a session that survives | low | Needs concurrent requests; it's the pysqlite late-`BEGIN` issue already in `deferred-work.md` (1.2b E4) | reject (covered by existing defer) |
 
 ## Verification
 
