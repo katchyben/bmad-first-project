@@ -9,29 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { addShortcutHint, isMacPlatform } from '@/lib/platform';
 import { chipClass } from './chipClass';
 import { DuePicker } from './DuePicker';
+import { FIELD_TEXT, KBD_HINT, isSubmitEnter } from './fields';
 import { formatDue } from './formatDue';
 import { DEFAULT_PRESET, PRESETS, resolvePreset, toLocalIso, type PresetId } from './presets';
-
-// Class lists that mix the custom `text-<role>` sizes with colours are joined
-// plainly, not with `cn()`: tailwind-merge would drop one as a colour clash.
-// The shadcn Input and Textarea go through `cn()`, so they take the 15px input
-// size as an arbitrary value, which tailwind-merge does recognise as a size,
-// and the textarea's 16px padding (add-input-padding-x) as `px-4` so it replaces
-// the primitive's `px-2.5`.
-const FIELD_TEXT = 'text-[15px] md:text-[15px]';
-
-/**
- * True for the Enter that submits: not Shift+Enter, and not one that ends an IME
- * composition (Safari reports that one with `isComposing` false but keyCode 229).
- */
-function isSubmitEnter(event: KeyboardEvent): boolean {
-  return (
-    event.key === 'Enter' &&
-    !event.shiftKey &&
-    !event.nativeEvent.isComposing &&
-    event.nativeEvent.keyCode !== 229
-  );
-}
 
 /** A preset, or the instant picked in the due popover. */
 type Due = { kind: 'preset'; preset: PresetId } | { kind: 'picked'; at: Date };
@@ -218,7 +198,7 @@ export function AddTask({ titleRef: externalTitleRef, onEscape, mac: macProp }: 
         <kbd
           aria-hidden="true"
           data-testid="kbd-hint"
-          className="pointer-events-none absolute top-1/2 right-add-input-padding-x -translate-y-1/2 rounded-xs border border-b-2 border-border bg-card px-1 text-kbd text-muted-foreground"
+          className={`pointer-events-none absolute top-1/2 right-add-input-padding-x -translate-y-1/2 ${KBD_HINT}`}
         >
           {titleFocused ? 'Enter' : addShortcutHint(mac)}
         </kbd>
@@ -271,6 +251,7 @@ export function AddTask({ titleRef: externalTitleRef, onEscape, mac: macProp }: 
             name="description"
             rows={3}
             placeholder="Description (optional)"
+            // 16px padding (add-input-padding-x) as `px-4`, so `cn()` replaces the primitive's `px-2.5`.
             className={`field-sizing-fixed min-h-0 rounded-lg bg-card px-4 py-2.5 dark:bg-card ${FIELD_TEXT}`}
             value={description}
             onChange={(e) => setDescription(e.target.value)}

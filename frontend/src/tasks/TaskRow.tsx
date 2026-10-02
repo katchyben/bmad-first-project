@@ -1,5 +1,8 @@
 import { CircleAlert } from 'lucide-react';
 import type { TaskResponse, TaskStatus } from '@/client/types.gen';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { fade } from '@/lib/motion';
 import { formatDue } from './formatDue';
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -46,7 +49,47 @@ type Props = {
   focused: boolean;
   /** Select this row (on press or click). */
   onSelect: () => void;
+  /** Open the inline edit row; omitted for finished tasks, which offer no actions. */
+  onEdit?: () => void;
 };
+
+/**
+ * A row action (DESIGN.md `row-action-button`): ghost, 26px, its tooltip naming
+ * its key. Out of the Tab order: the grid is the one Tab stop and the key is
+ * the keyboard route.
+ */
+function RowAction({
+  label,
+  shortcut,
+  onActivate,
+}: {
+  label: string;
+  shortcut: string;
+  onActivate: () => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          tabIndex={-1}
+          aria-keyshortcuts={shortcut}
+          className="h-auto min-h-[26px] rounded-md px-2 text-[12px] font-medium hover:bg-accent"
+          onClick={(event) => {
+            // The row's own click would focus the grid; the action decides focus.
+            event.stopPropagation();
+            onActivate();
+          }}
+        >
+          {label}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{`${label} (${shortcut})`}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 /**
  * One task row (DESIGN.md Task row) in the task grid: cell 1 holds the status
@@ -57,15 +100,16 @@ type Props = {
  * the 2px inset ring. Class names are joined plainly, not with `cn()`, because
  * tailwind-merge would treat the custom `text-row-*` sizes as colours.
  */
-export function TaskRow({ task, id, now, overdue, selected, focused, onSelect }: Props) {
+export function TaskRow({ task, id, now, overdue, selected, focused, onSelect, onEdit }: Props) {
   const dueText = formatDue(new Date(task.due_at), now);
   const background = overdue
     ? 'bg-overdue-tint shadow-[inset_3px_0_0_var(--overdue)]'
     : selected
       ? 'bg-row-selected'
-      : 'bg-card';
+      : 'bg-card hover:bg-row-hover';
+  const hasActions = onEdit !== undefined;
   const rowClass = [
-    'flex min-h-row-min-height items-start px-row-padding-x py-row-padding-y',
+    'group relative flex min-h-row-min-height items-start px-row-padding-x py-row-padding-y',
     'border-t border-border first:border-t-0',
     background,
     selected && focused ? 'row-ring' : '',
@@ -108,15 +152,31 @@ export function TaskRow({ task, id, now, overdue, selected, focused, onSelect }:
             )}
             <span
               data-testid="task-due"
-              className={`text-row-meta ${overdue ? 'text-overdue' : 'text-muted-foreground'}`}
+              // On hover the actions take the due time's place; a selected row keeps it.
+              className={`text-row-meta ${overdue ? 'text-overdue' : 'text-muted-foreground'}${hasActions && !selected ? ` ${fade} group-hover:opacity-0` : ''}`}
             >
               {dueText}
             </span>
           </span>
         </div>
       </div>
-      {/* Row actions arrive with the edit and delete stories. */}
-      <div role="gridcell" data-testid="row-actions" className="shrink-0" />
+      {/*
+        Hover reveals the actions over the due time's place at the right edge;
+        selection reveals them in flow, so the due time stays, shifted left.
+      */}
+      <div
+        role="gridcell"
+        data-testid="row-actions"
+        className={
+          !hasActions
+            ? 'shrink-0'
+            : selected
+              ? `ml-row-gap -my-px flex shrink-0 items-center gap-1 opacity-100 ${fade}`
+              : `pointer-events-none absolute top-[calc(var(--spacing-row-padding-y)-1px)] right-row-padding-x flex items-center gap-1 opacity-0 ${fade} group-hover:pointer-events-auto group-hover:opacity-100`
+        }
+      >
+        {onEdit && <RowAction label="Edit" shortcut="E" onActivate={onEdit} />}
+      </div>
     </div>
   );
 }

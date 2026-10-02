@@ -362,3 +362,131 @@ test('moves through the tasks with the keyboard, and ⌘K / Esc move between inp
     'true',
   );
 });
+
+test('edits a task title in place: only the title is sent, and the row is focused', async ({
+  page,
+}) => {
+  const token = await logIn(page);
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const before = `Edit me ${suffix}`;
+  const after = `Edited ${suffix}`;
+  await createTask(page, token, before, await localDue(page, 1, 11));
+  await page.reload();
+  const row = rows(page).filter({ hasText: before });
+  await expect(row).toBeVisible();
+  const rowId = (await row.getAttribute('id'))!;
+
+  // Hover reveals the Edit action, with its tooltip.
+  await row.hover();
+  const edit = row.getByRole('button', { name: 'Edit' });
+  await expect(edit).toHaveCSS('opacity', '1');
+  await expect(edit).toHaveAttribute('aria-keyshortcuts', 'E');
+  expect((await edit.boundingBox())!.height).toBeGreaterThanOrEqual(26);
+  await edit.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Edit (E)');
+
+  // The keyboard route: select the row, then E.
+  await row.click();
+  await expect(grid(page)).toBeFocused();
+  await page.keyboard.press('e');
+  const title = page.getByRole('textbox', { name: 'Task title' });
+  await expect(title).toBeFocused();
+  await expect(title).toHaveValue(before);
+  await expect(grid(page)).toHaveAttribute('aria-activedescendant', rowId);
+
+  await title.fill(after);
+  const patch = page.waitForRequest((r) => r.method() === 'PATCH');
+  await title.press('Enter');
+  expect((await patch).postDataJSON()).toEqual({ title: after });
+
+  const saved = rows(page).filter({ hasText: after });
+  await expect(saved).toBeVisible();
+  await expect(saved).toHaveAccessibleName(`${after}, To do, due Tomorrow, 11:00 AM`);
+  await expect(title).toHaveCount(0);
+  await expect(grid(page)).toBeFocused();
+  await expect(grid(page)).toHaveAttribute('aria-activedescendant', rowId);
+  await expect(saved).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toHaveText('Saved.');
+});
+
+test('changing the due date-time in the edit row moves the task to its new place', async ({
+  page,
+}) => {
+  const token = await logIn(page);
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const moving = `Moving ${suffix}`;
+  const staying = `Staying ${suffix}`;
+  await createTask(page, token, staying, await localDue(page, 3, 10));
+  await createTask(page, token, moving, await localDue(page, 5, 10));
+  await page.reload();
+  const order = async () => {
+    const titles = await rows(page).allTextContents();
+    return [titles.findIndex((t) => t.includes(moving)), titles.findIndex((t) => t.includes(staying))];
+  };
+  await expect(rows(page).filter({ hasText: moving })).toBeVisible();
+  const [m0, s0] = await order();
+  expect(m0).toBeGreaterThan(s0);
+
+  const row = rows(page).filter({ hasText: moving });
+  await row.hover();
+  await row.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.getByRole('textbox', { name: 'Task title' })).toBeFocused();
+  const patch = page.waitForRequest((r) => r.method() === 'PATCH');
+  const editRow = page.getByTestId('edit-row');
+  await editRow.getByRole('button', { name: 'Tomorrow 9:00 AM' }).click();
+  await editRow.getByRole('button', { name: 'Save' }).click();
+  expect(Object.keys((await patch).postDataJSON())).toEqual(['due_at']);
+
+  const moved = rows(page).filter({ hasText: moving });
+  await expect(moved).toHaveAccessibleName(`${moving}, To do, due Tomorrow, 9:00 AM`);
+  await expect.poll(async () => {
+    const [m, s] = await order();
+    return m < s;
+  }).toBe(true);
+  await expect(grid(page)).toBeFocused();
+  await expect(moved).toHaveAttribute('aria-selected', 'true');
+});
+
+test('narrow: at 320px the open edit row has no horizontal scroll and 24px targets', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const token = await logIn(page);
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const title = `Narrow edit ${suffix}`;
+  await createTask(page, token, title, await localDue(page, 2, 9));
+  await page.reload();
+  const row = rows(page).filter({ hasText: title });
+  await row.click();
+  await page.keyboard.press('e');
+  const titleField = page.getByRole('textbox', { name: 'Task title' });
+  await expect(titleField).toBeFocused();
+
+  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  const editRow = page.getByTestId('edit-row');
+  const targets = [
+    titleField,
+    editRow.getByRole('textbox', { name: 'Description' }),
+    editRow.getByRole('button', { name: 'Tomorrow 9:00 AM' }),
+    editRow.getByRole('button', { name: 'Next Monday 9:00 AM' }),
+    editRow.getByRole('button', { name: /pick another date/ }),
+    editRow.getByRole('button', { name: 'Cancel' }),
+    editRow.getByRole('button', { name: 'Save' }),
+  ];
+  for (const target of targets) {
+    const box = (await target.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+    expect(box.height).toBeGreaterThanOrEqual(24);
+  }
+
+  // Esc discards and hands focus back to the row.
+  await page.keyboard.press('Escape');
+  await expect(editRow).toHaveCount(0);
+  await expect(grid(page)).toBeFocused();
+  await expect(row).toHaveAttribute('aria-selected', 'true');
+});

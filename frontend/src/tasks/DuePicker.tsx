@@ -20,8 +20,15 @@ type DuePickerProps = {
   pressed: boolean;
   /** Called on Set with the picked local date and time. */
   onSet: (due: Date) => void;
-  /** Where focus goes after Set (the add input; the edit row's title later). */
+  /** Where focus goes after Set (the add input, or the edit row's title). */
   focusAfterSet: RefObject<HTMLElement | null>;
+  /**
+   * The chip's text in place of the default (the edit row shows the task's
+   * current due here, unpressed, while `value` seeds the popover with it).
+   */
+  label?: string;
+  /** The id of the form's error slot, for the chip's `aria-describedby`. */
+  describedBy?: string;
 };
 
 /**
@@ -31,7 +38,14 @@ type DuePickerProps = {
  * is Set; Set returns focus to `focusAfterSet`, Esc to the chip, unchanged.
  * After Set the chip reads the value ("Oct 12, 9:00 AM").
  */
-export function DuePicker({ value, pressed, onSet, focusAfterSet }: DuePickerProps) {
+export function DuePicker({
+  value,
+  pressed,
+  onSet,
+  focusAfterSet,
+  label: labelOverride,
+  describedBy,
+}: DuePickerProps) {
   const timeId = useId();
   const [open, setOpen] = useState(false);
   const [today, setToday] = useState(() => startOfDay(new Date()));
@@ -87,7 +101,7 @@ export function DuePicker({ value, pressed, onSet, focusAfterSet }: DuePickerPro
     set();
   }
 
-  const label = value ? formatDueAbsolute(value, new Date()) : PICK_DATE_LABEL;
+  const label = labelOverride ?? (value ? formatDueAbsolute(value, new Date()) : PICK_DATE_LABEL);
 
   return (
     <Popover modal open={open} onOpenChange={onOpenChange}>
@@ -96,6 +110,7 @@ export function DuePicker({ value, pressed, onSet, focusAfterSet }: DuePickerPro
         aria-pressed={pressed}
         // The visible value comes first, so the label stays in the name.
         aria-label={label === PICK_DATE_LABEL ? undefined : `${label}, pick another date`}
+        aria-describedby={describedBy}
         className={chipClass(pressed)}
       >
         <CalendarDays aria-hidden="true" className="size-3" />

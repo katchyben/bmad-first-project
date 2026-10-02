@@ -8,11 +8,14 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from 'react';
+import { useAnnounce } from '@/a11y/announce';
 import { isUnreachable } from '@/api/errors';
 import { listTasksOptions } from '@/client/@tanstack/react-query.gen';
 import type { TaskResponse } from '@/client/types.gen';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { fade } from '@/lib/motion';
-import { isShownOverdue } from './overdue';
+import { EditTaskRow } from './EditTaskRow';
+import { isActive, isShownOverdue } from './overdue';
 import { TaskRow } from './TaskRow';
 import { useNow } from './useNow';
 
@@ -64,6 +67,17 @@ export const GRID_INSTRUCTIONS =
 /** The selected task, and where it was, so a vanished task hands over to its old index. */
 type Selection = { id: number; index: number };
 
+/** The task open in the inline edit row, and a counter that asks it to focus its title. */
+type Editing = { id: number; focusRequest: number };
+
+/** E with no modifiers (Caps Lock may report it upper-case). */
+const isEditKey = (event: KeyboardEvent) =>
+  (event.key === 'e' || event.key === 'E') &&
+  !event.altKey &&
+  !event.ctrlKey &&
+  !event.metaKey &&
+  !event.shiftKey;
+
 /**
  * Keep the selection on its task across refetches; if the task is gone, move it
  * to the row now at its old index, clamped to the list.
@@ -88,7 +102,12 @@ type GridProps = {
  * The task grid: one Tab stop that keeps DOM focus and points at the selected
  * row with `aria-activedescendant`. The first focus selects the first row;
  * ↑/↓ move one row and stop at the ends; clicking a row selects it and focuses
- * the grid. Letter shortcuts named in the instructions belong to later stories.
+ * the grid. E (or the row's Edit action) on an active task replaces its row
+ * with the inline edit row. Only one is open: E on another row discards it,
+ * while clicking or arrowing to another row leaves it open. When it closes, its
+ * task is selected and the grid focused again; if a refetch drops the task or
+ * finishes it, the row goes and focus returns to the grid. The other letter
+ * shortcuts belong to later stories.
  */
 function TaskGrid({ tasks, now, gridRef, onEmptied }: GridProps) {
   const id = useId();
@@ -98,11 +117,30 @@ function TaskGrid({ tasks, now, gridRef, onEmptied }: GridProps) {
   const ref = gridRef ?? ownRef;
   const [selection, setSelection] = useState<Selection | null>(null);
   const [focused, setFocused] = useState(false);
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const announce = useAnnounce();
 
   // Adjusted during render, so a refetch never paints a stale selection.
   const followed = followSelection(selection, tasks);
   if (followed !== selection) setSelection(followed);
   const selectedId = followed?.id ?? null;
+
+  // The edited task is gone or finished after a refetch: drop the edit row,
+  // and hand focus (which it took with it) back to the grid.
+  const [refocus, setRefocus] = useState(false);
+  if (editing !== null) {
+    const edited = tasks.find((t) => t.id === editing.id);
+    if (edited === undefined || !isActive(edited)) {
+      setEditing(null);
+      setRefocus(true);
+    }
+  }
+  useLayoutEffect(() => {
+    if (!refocus) return;
+    setRefocus(false);
+    const active = document.activeElement;
+    if (active === null || active === document.body) ref.current?.focus();
+  }, [refocus, ref]);
   const selectedIndex = followed?.index ?? null;
 
   // Only while the grid has focus, so the page never jumps while the user types.
@@ -125,7 +163,30 @@ function TaskGrid({ tasks, now, gridRef, onEmptied }: GridProps) {
 
   const select = (index: number) => setSelection({ id: tasks[index].id, index });
 
+  /** Open the edit row on the task at `index`, discarding any other one. */
+  function openEdit(index: number) {
+    const taskId = tasks[index].id;
+    select(index);
+    setEditing((current) => ({ id: taskId, focusRequest: (current?.focusRequest ?? 0) + 1 }));
+  }
+
+  /** The edit row closed: select its task by ID, focus the grid, and announce a save. */
+  function closeEdit(taskId: number, index: number, saved: boolean) {
+    setEditing((current) => (current?.id === taskId ? null : current));
+    setSelection({ id: taskId, index });
+    ref.current?.focus();
+    if (saved) announce('Saved.');
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    // Keys typed inside the edit row (or its popover) are the row's own.
+    if (event.target !== event.currentTarget) return;
+    if (isEditKey(event)) {
+      if (followed === null || !isActive(tasks[followed.index])) return;
+      event.preventDefault();
+      openEdit(followed.index);
+      return;
+    }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     event.preventDefault();
@@ -163,21 +224,36 @@ function TaskGrid({ tasks, now, gridRef, onEmptied }: GridProps) {
         }}
         onKeyDown={onKeyDown}
       >
-        {tasks.map((task, index) => (
-          <TaskRow
-            key={task.id}
-            id={rowId(task.id)}
-            task={task}
-            now={now}
-            overdue={isShownOverdue(task, now)}
-            selected={task.id === selectedId}
-            focused={focused}
-            onSelect={() => {
-              select(index);
-              ref.current?.focus();
-            }}
-          />
-        ))}
+        <TooltipProvider>
+          {tasks.map((task, index) =>
+            editing?.id === task.id && isActive(task) ? (
+              <EditTaskRow
+                key={task.id}
+                id={rowId(task.id)}
+                task={task}
+                now={now}
+                selected={task.id === selectedId}
+                focusRequest={editing.focusRequest}
+                onClose={(saved) => closeEdit(task.id, index, saved)}
+              />
+            ) : (
+              <TaskRow
+                key={task.id}
+                id={rowId(task.id)}
+                task={task}
+                now={now}
+                overdue={isShownOverdue(task, now)}
+                selected={task.id === selectedId}
+                focused={focused}
+                onSelect={() => {
+                  select(index);
+                  ref.current?.focus();
+                }}
+                onEdit={isActive(task) ? () => openEdit(index) : undefined}
+              />
+            ),
+          )}
+        </TooltipProvider>
       </div>
     </>
   );

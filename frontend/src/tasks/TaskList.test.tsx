@@ -1,5 +1,6 @@
-import { act } from 'react';
+import { act, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AnnounceProvider } from '@/a11y/announce';
 import { NetworkError } from '@/api/errors';
 import { listTasksQueryKey } from '@/client/@tanstack/react-query.gen';
 import type { TaskResponse } from '@/client/types.gen';
@@ -22,14 +23,19 @@ afterEach(() => {
 const grid = () => document.querySelector<HTMLDivElement>('[role="grid"][aria-label="Tasks"]');
 const rows = () => [...document.querySelectorAll<HTMLDivElement>('[role="grid"][aria-label="Tasks"] > [role="row"]')];
 const row = (title: string) => rows().find((r) => r.textContent?.includes(title))!;
-const status = () => document.querySelector('[role="status"]');
+// The list's own live region, not the app announcer the tests render around it.
+const STATUS = '[role="status"]:not([data-testid="announcer"])';
+const status = () => document.querySelector(STATUS);
+
+/** Render inside the app's live region, as App does. */
+const view = (node: ReactNode) => h.render(<AnnounceProvider>{node}</AnnounceProvider>);
 
 function serve(tasks: TaskResponse[]): void {
   h.fetchMock.mockImplementation(() => Promise.resolve(jsonResponse(tasks)));
 }
 
 async function renderLoaded(): Promise<void> {
-  await h.render(<TaskList />);
+  await view(<TaskList />);
   await vi.waitFor(() =>
     expect(document.querySelector('[data-testid="task-list-content"]')).not.toBeNull(),
   );
@@ -77,7 +83,7 @@ describe('task list', () => {
     const dueText = formatDue(new Date(due), new Date());
     expect(r.querySelector('[data-testid="task-due"]')!.textContent).toBe(dueText);
     expect(r.getAttribute('aria-label')).toBe(`Pack bags, To do, due ${dueText}`);
-    // Left to right: mark, title, due, then the (empty) actions cell.
+    // Left to right: mark, title, due, then the actions cell.
     const order = [...r.querySelectorAll('[data-testid]')].map((e) => e.getAttribute('data-testid'));
     expect(order).toEqual(['status-mark', 'task-title', 'task-due', 'row-actions']);
     expect(r.dataset.overdue).toBeUndefined();
@@ -242,7 +248,7 @@ describe('cold load', () => {
 
   it('shows nothing before 1 s, then one muted "Loading…" line in a polite live region', async () => {
     h.fetchMock.mockImplementation(() => new Promise(() => {}));
-    await h.render(<TaskList />);
+    await view(<TaskList />);
 
     // The live region exists, empty, before the text arrives, so it is announced once.
     expect(status()).not.toBeNull();
@@ -255,14 +261,14 @@ describe('cold load', () => {
     expect(status()!.textContent).toBe('Loading…');
     expect(status()!.className).toContain('text-muted-foreground');
     expect(status()!.className).toContain('fade');
-    expect(document.querySelectorAll('[role="status"]')).toHaveLength(1);
+    expect(document.querySelectorAll(STATUS)).toHaveLength(1);
     expect(document.querySelector('svg')).toBeNull();
   });
 
   it('replaces "Loading…" with the list when the data arrives', async () => {
     let release: (r: Response) => void = () => {};
     h.fetchMock.mockImplementation(() => new Promise((resolve) => (release = resolve)));
-    await h.render(<TaskList />);
+    await view(<TaskList />);
     await advance(LOADING_DELAY_MS);
     expect(status()!.textContent).toBe('Loading…');
 
@@ -274,7 +280,7 @@ describe('cold load', () => {
 
   it('shows nothing when the data arrives within 1 s', async () => {
     serve([task({ title: 'Quick' })]);
-    await h.render(<TaskList />);
+    await view(<TaskList />);
     await advance(10);
     expect(row('Quick')).toBeDefined();
     await advance(2 * LOADING_DELAY_MS);
@@ -283,7 +289,7 @@ describe('cold load', () => {
 
   it('never shows "Loading…" on a refetch', async () => {
     serve([task({ title: 'Kept' })]);
-    await h.render(<TaskList />);
+    await view(<TaskList />);
     await advance(10);
     expect(row('Kept')).toBeDefined();
 
@@ -299,7 +305,7 @@ describe('cold load', () => {
 
   it('does not show "Loading…" while the server is unreachable', async () => {
     h.fetchMock.mockImplementation(() => Promise.reject(new TypeError('Failed to fetch')));
-    await h.render(<TaskList />);
+    await view(<TaskList />);
     await advance(10);
     expect(h.queryClient.getQueryState(listTasksQueryKey())!.fetchFailureReason).toBeInstanceOf(
       NetworkError,
@@ -370,13 +376,13 @@ describe('keyboard grid', () => {
       expect(cells).toHaveLength(2);
       expect(cells[0].querySelector('[data-testid="task-title"]')).not.toBeNull();
       expect(cells[0].querySelector('[data-testid="status-mark"]')).not.toBeNull();
-      expect(cells[1].textContent).toBe('');
+      expect(cells[1].textContent).toBe('Edit');
       expect(r.id).not.toBe('');
       expect(r.getAttribute('aria-selected')).toBe('false');
       expect(r.getAttribute('aria-label')).toMatch(/, To do, due /);
     }
-    // Only the grid is focusable: one Tab stop.
-    expect(document.querySelectorAll('[tabindex]')).toHaveLength(1);
+    // Only the grid is in the Tab order: one Tab stop.
+    expect(document.querySelectorAll('[tabindex]:not([tabindex="-1"])')).toHaveLength(1);
     expect(g.getAttribute('aria-activedescendant')).toBeNull();
   });
 
@@ -421,7 +427,7 @@ describe('keyboard grid', () => {
     await renderLoaded();
     await focusGrid();
     await press('ArrowDown');
-    for (const key of ['s', 'b', 'c', 'x', 'e', 'Backspace', 'z', 'Home', 'End', 'PageDown']) {
+    for (const key of ['s', 'b', 'c', 'x', 'Backspace', 'z', 'Home', 'End', 'PageDown']) {
       const event = await press(key);
       expect(event.defaultPrevented).toBe(false);
     }
@@ -496,7 +502,7 @@ describe('keyboard grid', () => {
   it('calls onEmptied when the focused grid empties, and not when it was not focused', async () => {
     const onEmptied = vi.fn();
     serve(three());
-    await h.render(<TaskList onEmptied={onEmptied} />);
+    await view(<TaskList onEmptied={onEmptied} />);
     await vi.waitFor(() => expect(grid()).not.toBeNull());
     await focusGrid();
     await refetchWith([]);

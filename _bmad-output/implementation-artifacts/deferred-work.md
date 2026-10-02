@@ -81,3 +81,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-5d-move-through-my-tasks-with-the-keyboard.md`
   summary: Verify the task grid with real screen readers (VoiceOver, NVDA, JAWS). `aria-activedescendant` points at `role="row"` elements in a non-tree `grid`, which some AT announces poorly; if so, point at the first gridcell or switch to `listbox`/`option`.
   evidence: Blind Hunter (2.5d), unverified. The APG grid pattern puts focus on cells.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-6a-edit-a-task-in-place.md`
+  summary: UX-DR21's "→ / Tab enter the selected row's actions (← / Shift+Tab back)". In 2.6a the row action buttons are `tabIndex={-1}` and the keyboard reaches them through their letter keys only. Add focus movement into and out of the actions cell when the row-action set is complete (2.6b or Epic 3's status actions).
+  evidence: 2.6a's ACs name only E and the Edit button; the grid's single-Tab-stop `aria-activedescendant` model needs a deliberate design for in-row focus.
