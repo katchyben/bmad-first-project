@@ -29,20 +29,20 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-01-2026 16:41
-last_updated: 10-02-2026 06:04
+last_updated: 10-02-2026 06:30
 project: bmad-first-project
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 development_status:
-  epic-1: in-progress
-  1-1-backend-structure-and-guard-rails: review
-  1-2-database-and-test-harness: review
-  1-3-frontend-skeleton-with-generated-api-client: review
-  1-4-create-the-account-from-the-command-line: review
-  1-5-log-in-and-log-out-through-the-api: review
-  1-6-log-in-and-out-in-the-web-app: review
-  epic-1-retrospective: optional
+  epic-1: done
+  1-1-backend-structure-and-guard-rails: done
+  1-2-database-and-test-harness: done
+  1-3-frontend-skeleton-with-generated-api-client: done
+  1-4-create-the-account-from-the-command-line: done
+  1-5-log-in-and-log-out-through-the-api: done
+  1-6-log-in-and-out-in-the-web-app: done
+  epic-1-retrospective: done
 
   epic-2: backlog
   2-1-create-a-task-through-the-api: backlog
@@ -61,3 +61,67 @@ development_status:
   3-5-move-tasks-through-their-statuses-in-the-web-app-with-undo: backlog
   3-6-finished-section-and-status-filter-in-the-web-app: backlog
   epic-3-retrospective: optional
+action_items:
+  - id: "epic-1-retro-item-1-send-cache-control-no-store-and-pragma-n"
+    epic: 1
+    action: "Send Cache-Control: no-store and Pragma: no-cache on every POST /api/auth/token
+      response, including the request-validation 422"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
+  - id: "epic-1-retro-item-2-make-the-422-login-test-use-the-backend"
+    epic: 1
+    action: "Make the 422 login test use the backend real validation message and add
+      an e2e for an empty Login submit"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
+  - id: "epic-1-retro-item-3-reconcile-epics-md-stories-1-2-1-4-and-a"
+    epic: 1
+    action: "Reconcile epics.md Stories 1.2-1.4 and ARCHITECTURE-SPINE.md (AD-11 retries,
+      Conventions Tests row) with the five recorded Epic 1 decisions"
+    owner: "Benny"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
+  - id: "epic-1-retro-item-4-story-2-5-render-the-connection-banner-o"
+    epic: 1
+    action: "Story 2.5: render the connection banner on the Login screen too, so a
+      login while the server is unreachable gives feedback"
+    owner: "dev (Story 2.5)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
+  - id: "epic-1-retro-item-5-epic-2-first-protected-query-e2e-where-a"
+    epic: 1
+    action: "Epic 2 first protected query: e2e where a revoked session (rerun create-account)
+      sends the running UI to Login via a real 401"
+    owner: "dev (Epic 2)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
+  - id: "epic-1-retro-item-6-size-epic-2-stories-to-fit-within-one-sp"
+    epic: 1
+    action: "Size Epic 2 stories to fit within one spec each when creating or refining
+      them"
+    owner: "Benny"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
+  - id: "epic-1-retro-item-7-decide-whether-the-build-three-layer-rev"
+    epic: 1
+    action: "Decide whether the build three-layer review counts as code review for
+      review to done, or run bmad-code-review first"
+    owner: "Benny"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
+  - id: "epic-1-retro-item-8-when-a-review-changes-a-spec-frozen-inte"
+    epic: 1
+    action: "When a review changes a spec frozen intent, record it in that spec Spec
+      Change Log, one-shot specs included"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
+  - id: "epic-1-retro-item-9-check-the-ide-on-open-formatting-setting"
+    epic: 1
+    action: "Check the IDE on-open formatting settings (line 1 of main.py and cli.py
+      gained leading spaces when opened)"
+    owner: "Benny"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-02.md"
