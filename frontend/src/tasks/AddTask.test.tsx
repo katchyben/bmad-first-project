@@ -32,6 +32,15 @@ beforeEach(() => {
         dispatchEvent: () => false,
       }) as MediaQueryList,
   );
+  // Radix's popper (the due popover) measures its anchor and content.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   h = createHarness();
 });
 
@@ -144,8 +153,12 @@ describe('add task: anatomy', () => {
     expect(icon.getAttribute('aria-hidden')).toBe('true');
 
     const chips = [...document.querySelectorAll('button[aria-pressed]')];
-    expect(chips.map((c) => c.textContent)).toEqual(['Tomorrow 9:00 AM', 'Next Monday 9:00 AM']);
-    expect(chips.map((c) => c.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+    expect(chips.map((c) => c.textContent)).toEqual([
+      'Tomorrow 9:00 AM',
+      'Next Monday 9:00 AM',
+      'Pick date…',
+    ]);
+    expect(chips.map((c) => c.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
     expect(chips.every((c) => c.className.includes('min-h-min-target'))).toBe(true);
 
     const link = descriptionLink()!;
@@ -345,6 +358,23 @@ describe('add task: edits while the create is in flight', () => {
   });
 });
 
+describe('add task: re-pressing the pressed preset in flight', () => {
+  it('still resets after success', async () => {
+    const held = holdCreate();
+    await renderAddTask();
+    await click(chip('Next Monday 9:00 AM'));
+    await type(titleInput(), 'Plan week');
+    await press(titleInput(), 'Enter');
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
+    await click(chip('Next Monday 9:00 AM'));
+    await act(async () => held.resolve(jsonResponse(task({ title: 'Plan week' }), 201)));
+
+    await vi.waitFor(() => expect(titleInput().value).toBe(''));
+    expect(chip('Tomorrow 9:00 AM').getAttribute('aria-pressed')).toBe('true');
+    expect(chip('Next Monday 9:00 AM').getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
 describe('add task: errors', () => {
   const PAST = 'That time has already passed.';
 
@@ -467,5 +497,114 @@ describe('add task: description', () => {
     expect(document.activeElement).toBe(titleInput());
     expect(textarea()).toBeNull();
     expect(descriptionLink()).toBeDefined();
+  });
+});
+
+describe('add task: picked due date-time', () => {
+  /** Let Radix's deferred focus moves (setTimeout 0) run. */
+  const settle = () => act(async () => new Promise<void>((r) => setTimeout(r, 0)));
+  const pickChip = () => document.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')!;
+  const timeField = () =>
+    document.querySelector<HTMLInputElement>('[role="dialog"] input[type="time"]')!;
+
+  /** Open "Pick date…", Enter on `iso`'s day, type `time`, Enter to Set. */
+  async function pick(iso: string, time: string): Promise<void> {
+    await click(pickChip());
+    await settle();
+    await press(document.querySelector(`[role="dialog"] td[data-day="${iso}"] button`)!, 'Enter');
+    await type(timeField(), time);
+    await press(timeField(), 'Enter');
+    await settle();
+  }
+
+  it('sends the picked local instant with the local offset', async () => {
+    serveCreated();
+    await renderAddTask();
+    await type(titleInput(), 'Dentist');
+    await pick('2026-10-12', '16:20');
+    expect(document.activeElement).toBe(titleInput());
+    expect(pickChip().textContent).toBe('Oct 12, 4:20 PM');
+    expect(pickChip().getAttribute('aria-label')).toBe('Oct 12, 4:20 PM, pick another date');
+    expect(pickChip().getAttribute('aria-pressed')).toBe('true');
+    expect(chip('Tomorrow 9:00 AM').getAttribute('aria-pressed')).toBe('false');
+    await press(titleInput(), 'Enter');
+
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
+    expect(await postBody()).toEqual({
+      title: 'Dentist',
+      due_at: toLocalIso(new Date(2026, 9, 12, 16, 20)),
+    });
+  });
+
+  it('resets to Tomorrow and "Pick date…" on success', async () => {
+    serveCreated();
+    await renderAddTask();
+    await type(titleInput(), 'Dentist');
+    await pick('2026-10-12', '16:20');
+    await press(titleInput(), 'Enter');
+
+    await vi.waitFor(() => expect(titleInput().value).toBe(''));
+    expect(chip('Tomorrow 9:00 AM').getAttribute('aria-pressed')).toBe('true');
+    expect(pickChip().textContent).toBe('Pick date…');
+    expect(pickChip().getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('keeps a value re-picked while the create is in flight', async () => {
+    const held = holdCreate();
+    await renderAddTask();
+    await type(titleInput(), 'Dentist');
+    await pick('2026-10-12', '16:20');
+    await press(titleInput(), 'Enter');
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
+    await pick('2026-10-13', '10:00');
+    await act(async () => held.resolve(jsonResponse(task({ title: 'Dentist' }), 201)));
+
+    await vi.waitFor(() => expect(titleInput().value).toBe(''));
+    expect(pickChip().textContent).toBe('Oct 13, 10:00 AM');
+  });
+
+  it('keeps an equal value re-picked while the create is in flight', async () => {
+    const held = holdCreate();
+    await renderAddTask();
+    await type(titleInput(), 'Dentist');
+    await pick('2026-10-12', '16:20');
+    await press(titleInput(), 'Enter');
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
+    await pick('2026-10-12', '16:20');
+    await act(async () => held.resolve(jsonResponse(task({ title: 'Dentist' }), 201)));
+
+    await vi.waitFor(() => expect(titleInput().value).toBe(''));
+    expect(pickChip().textContent).toBe('Oct 12, 4:20 PM');
+    expect(pickChip().getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('sends a picked time already past as is and shows the API message, keeping the pick', async () => {
+    const PAST = 'That time has already passed.';
+    serveError(422, { error: { code: 'validation_error', message: PAST } });
+    await renderAddTask();
+    await type(titleInput(), 'Too late');
+    await pick('2026-10-02', '08:00');
+    await press(titleInput(), 'Enter');
+
+    await vi.waitFor(() => expect(errorSlot().textContent).toBe(PAST));
+    expect(await postBody()).toEqual({
+      title: 'Too late',
+      due_at: toLocalIso(new Date(2026, 9, 2, 8, 0)),
+    });
+    expect(pickChip().textContent).toBe('Oct 2, 8:00 AM');
+    expect(pickChip().getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('clears the picked value when a preset is pressed', async () => {
+    serveCreated();
+    await renderAddTask();
+    await pick('2026-10-12', '16:20');
+    await click(chip('Next Monday 9:00 AM'));
+    expect(pickChip().textContent).toBe('Pick date…');
+    expect(pickChip().getAttribute('aria-pressed')).toBe('false');
+    await type(titleInput(), 'Plan week');
+    await press(titleInput(), 'Enter');
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
+    expect((await postBody()).due_at).toBe(toLocalIso(NEXT_MONDAY_9));
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDue } from './formatDue';
+import { formatDue, formatDueAbsolute } from './formatDue';
 
 // Local-time constructors keep these independent of the machine's time zone.
 const now = new Date(2026, 9, 2, 14, 30); // Fri Oct 2 2026, 2:30 PM
@@ -40,5 +40,15 @@ describe('formatDue', () => {
 
   it('uses plain spaces only', () => {
     expect(formatDue(new Date(2026, 9, 2, 15, 0), now)).not.toMatch(/[\u00a0\u202f]/);
+  });
+});
+
+describe('formatDueAbsolute', () => {
+  it.each([
+    ['this year', new Date(2026, 9, 12, 9, 0), 'Oct 12, 9:00 AM'],
+    ['tomorrow is still a date', new Date(2026, 9, 3, 9, 0), 'Oct 3, 9:00 AM'],
+    ['next year', new Date(2027, 0, 12, 21, 45), 'Jan 12, 2027, 9:45 PM'],
+  ])('%s', (_label, due, expected) => {
+    expect(formatDueAbsolute(due, now)).toBe(expected);
   });
 });

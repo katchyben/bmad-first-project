@@ -6,6 +6,8 @@ import { errorMessage, isEnvelopeError } from '@/api/errors';
 import { createTaskMutation, listTasksQueryKey } from '@/client/@tanstack/react-query.gen';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { chipClass } from './chipClass';
+import { DuePicker } from './DuePicker';
 import { formatDue } from './formatDue';
 import { DEFAULT_PRESET, PRESETS, resolvePreset, toLocalIso, type PresetId } from './presets';
 
@@ -16,15 +18,6 @@ import { DEFAULT_PRESET, PRESETS, resolvePreset, toLocalIso, type PresetId } fro
 // and the textarea's 16px padding (add-input-padding-x) as `px-4` so it replaces
 // the primitive's `px-2.5`.
 const FIELD_TEXT = 'text-[15px] md:text-[15px]';
-
-const chipClass = (pressed: boolean) =>
-  [
-    'inline-flex min-h-min-target items-center rounded-full border px-2.5 text-chip whitespace-nowrap',
-    'focus-ring transition-colors',
-    pressed
-      ? 'border-primary bg-primary text-primary-foreground'
-      : 'border-border bg-card text-muted-foreground hover:text-foreground',
-  ].join(' ');
 
 /**
  * True for the Enter that submits: not Shift+Enter, and not one that ends an IME
@@ -39,7 +32,12 @@ function isSubmitEnter(event: KeyboardEvent): boolean {
   );
 }
 
-type Fields = { title: string; preset: PresetId; description: string };
+/** A preset, or the instant picked in the due popover. */
+type Due = { kind: 'preset'; preset: PresetId } | { kind: 'picked'; at: Date };
+
+const DEFAULT_DUE: Due = { kind: 'preset', preset: DEFAULT_PRESET };
+
+type Fields = { title: string; due: Due; description: string };
 
 /**
  * The add-task input (DESIGN.md Components > Add-task input, Preset chip, Add
@@ -56,7 +54,7 @@ export function AddTask() {
   const errorId = `${id}-error`;
 
   const [title, setTitle] = useState('');
-  const [preset, setPreset] = useState<PresetId>(DEFAULT_PRESET);
+  const [due, setDue] = useState<Due>(DEFAULT_DUE);
   const [description, setDescription] = useState('');
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,9 +65,9 @@ export function AddTask() {
   // What was sent, and what the fields hold now: a success resets only the
   // fields the user has not changed while the request was in flight.
   const submitted = useRef<Fields | null>(null);
-  const latest = useRef<Fields>({ title, preset, description });
+  const latest = useRef<Fields>({ title, due, description });
   useEffect(() => {
-    latest.current = { title, preset, description };
+    latest.current = { title, due, description };
   });
   // Set when the link opens the textarea, so focus moves into it once it mounts.
   const focusDescription = useRef(false);
@@ -88,7 +86,8 @@ export function AddTask() {
       const descriptionCleared = sent !== null && now.description === sent.description;
       if (sent !== null) {
         if (now.title === sent.title) setTitle('');
-        if (now.preset === sent.preset) setPreset(DEFAULT_PRESET);
+        // The same object: a re-pick of an equal instant still counts as a change.
+        if (now.due === sent.due) setDue(DEFAULT_DUE);
         if (descriptionCleared) {
           setDescription('');
           setDescriptionOpen(false);
@@ -128,8 +127,9 @@ export function AddTask() {
     inFlight.current = true;
     setError(null);
     // No pre-validation: a blank title goes to the API like any other value.
-    submitted.current = { title, preset, description };
-    const dueAt = toLocalIso(resolvePreset(preset, new Date()));
+    submitted.current = { title, due, description };
+    // A picked time earlier than now is sent as is: the API's message shows in the slot.
+    const dueAt = toLocalIso(due.kind === 'picked' ? due.at : resolvePreset(due.preset, new Date()));
     create.mutate({
       body: { title, due_at: dueAt, ...(description === '' ? {} : { description }) },
     });
@@ -210,17 +210,34 @@ export function AddTask() {
         {error}
       </p>
       <div role="group" aria-label="Due" className="mt-2 flex flex-wrap gap-1.5 pl-10">
-        {PRESETS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            aria-pressed={preset === p.id}
-            className={chipClass(preset === p.id)}
-            onClick={() => setPreset(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
+        {PRESETS.map((p) => {
+          const pressed = due.kind === 'preset' && due.preset === p.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={pressed}
+              className={chipClass(pressed)}
+              // The same object when already pressed, so the success reset
+              // (an identity check against what was sent) still applies.
+              onClick={() =>
+                setDue((current) =>
+                  current.kind === 'preset' && current.preset === p.id
+                    ? current
+                    : { kind: 'preset', preset: p.id },
+                )
+              }
+            >
+              {p.label}
+            </button>
+          );
+        })}
+        <DuePicker
+          value={due.kind === 'picked' ? due.at : null}
+          pressed={due.kind === 'picked'}
+          onSet={(at) => setDue({ kind: 'picked', at })}
+          focusAfterSet={titleRef}
+        />
       </div>
       {descriptionOpen ? (
         <div className="mt-description-link-gap">

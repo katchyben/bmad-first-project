@@ -27,7 +27,19 @@ function dayPart(due: Date, now: Date): string {
   if (days === 0) return 'Today';
   if (days === 1) return 'Tomorrow';
   if (days >= 2 && days <= 6) return WEEKDAY.format(due);
+  return calendarDate(due, now);
+}
+
+function calendarDate(due: Date, now: Date): string {
   return (due.getFullYear() === now.getFullYear() ? MONTH_DAY : MONTH_DAY_YEAR).format(due);
+}
+
+/**
+ * The absolute style alone, always as a calendar date: "Oct 12, 9:00 AM", with
+ * the year added when it isn't `now`'s year. The picked-due chip shows this.
+ */
+export function formatDueAbsolute(due: Date, now: Date): string {
+  return plain(`${calendarDate(due, now)}, ${TIME.format(due)}`);
 }
 
 /**

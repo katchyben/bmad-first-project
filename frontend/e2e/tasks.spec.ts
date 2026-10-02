@@ -186,3 +186,109 @@ test('narrow: at 320px the add input, chips and link reflow with 24px targets', 
   expect(link.height).toBeGreaterThanOrEqual(24);
   expect(link.x + link.width).toBeLessThanOrEqual(320);
 });
+
+/** "Oct 16, 5:35 PM" (with the year when not this year) for `daysAhead` days out at h:m, local. */
+async function absoluteDue(page: Page, daysAhead: number, hour: number, minute: number) {
+  return page.evaluate(
+    ([days, h, m]) => {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      d.setHours(h, m, 0, 0);
+      const sameYear = d.getFullYear() === new Date().getFullYear();
+      const date = new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        ...(sameYear ? {} : { year: 'numeric' }),
+      }).format(d);
+      const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(d);
+      return `${date}, ${time}`.replace(/[\u00a0\u202f]/g, ' ');
+    },
+    [daysAhead, hour, minute] as const,
+  );
+}
+
+test('adds a task through "Pick date…" with a typed time and shows it in the list', async ({ page }) => {
+  await logIn(page);
+  const title = `Picked task ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await addInput(page).fill(title);
+  const pickChip = page.getByRole('button', { name: 'Pick date…' });
+  await pickChip.click();
+
+  const popover = page.getByRole('dialog', { name: 'Pick a due date and time' });
+  await expect(popover).toBeVisible();
+  await expect(popover).toHaveCSS('opacity', '1');
+  await expect(popover).toHaveCSS('animation-duration', '0.18s');
+  const time = popover.getByLabel('Time');
+  await expect(popover.getByText('Time', { exact: true })).toBeVisible();
+  // Today is focused; two weeks ahead by keyboard, Enter moves to Time.
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(time).toBeFocused();
+  await expect(time).toHaveValue('09:00');
+  await time.fill('17:35');
+  await time.press('Enter');
+
+  await expect(popover).toBeHidden();
+  await expect(addInput(page)).toBeFocused();
+  const expected = await absoluteDue(page, 14, 17, 35);
+  const chip = page.getByRole('button', { name: `${expected}, pick another date` });
+  await expect(chip).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Tomorrow 9:00 AM' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await addInput(page).press('Enter');
+
+  const row = rows(page).filter({ hasText: title });
+  await expect(row).toBeVisible();
+  await expect(row).toHaveAccessibleName(`${title}, To do, due ${expected}`);
+  await expect(row).toContainText(expected);
+  await expect(pickChip).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: 'Tomorrow 9:00 AM' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
+test('Esc closes the due popover without change and returns focus to the chip', async ({ page }) => {
+  await logIn(page);
+  const pickChip = page.getByRole('button', { name: 'Pick date…' });
+  await pickChip.click();
+  const popover = page.getByRole('dialog', { name: 'Pick a due date and time' });
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(popover.getByLabel('Time')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(popover).toBeHidden();
+  await expect(pickChip).toBeFocused();
+  await expect(pickChip).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('narrow: at 320px the due popover fits with 24px targets', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await logIn(page);
+  const pickChip = page.getByRole('button', { name: 'Pick date…' });
+  // Measured before opening: the modal popover hides the rest of the page.
+  expect((await pickChip.boundingBox())!.height).toBeGreaterThanOrEqual(24);
+  await pickChip.click();
+  const popover = page.getByRole('dialog', { name: 'Pick a due date and time' });
+  await expect(popover).toBeVisible();
+  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  const box = (await popover.boundingBox())!;
+  // Radix's collision padding keeps the gutter clear on both sides.
+  expect(box.x).toBeGreaterThanOrEqual(16);
+  expect(box.x + box.width).toBeLessThanOrEqual(320 - 16);
+  const targets = [
+    popover.getByLabel('Time'),
+    popover.getByRole('button', { name: 'Set' }),
+    popover.locator('td[data-today] button'),
+  ];
+  for (const target of targets) {
+    expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(24);
+  }
+});

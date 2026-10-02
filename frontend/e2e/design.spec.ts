@@ -143,7 +143,8 @@ test('component animations are off under prefers-reduced-motion: reduce', async 
   const content = page.getByTestId('popover-content');
   await expect(content).toBeVisible();
   const duration = await content.evaluate((el) => getComputedStyle(el).animationDuration);
-  // 0.01ms: effectively instant, but still fires animationend for Radix Presence.
+  // The popover fades in and out with a keyframe animation (Radix Presence waits
+  // for the exit one). 0.01ms: effectively instant, but still fires animationend.
   expect(parseFloat(duration)).toBeLessThan(0.001);
   expect(await style(page, 'button', 'transition-duration')).toBe('0s');
 });
@@ -174,8 +175,9 @@ test('without ?design-check the app renders, not the fixture', async ({ page }) 
   await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
   await expect(page.getByTestId('button')).toHaveCount(0);
 
-  // With a stored token, the main screen. The fake token works only while the
-  // main screen makes no API call; once Epic 2 adds a task query, mock it here.
+  // With a stored token, the main screen. The fake token would get a 401 from
+  // the task query and log out, racing the heading check, so the query is mocked.
+  await page.route('**/api/tasks', (route) => route.fulfill({ json: [] }));
   await page.evaluate(() => localStorage.setItem('todo.auth_token', 'any'));
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible();
