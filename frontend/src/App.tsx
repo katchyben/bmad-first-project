@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
+import { AnnounceProvider } from '@/a11y/announce';
 import { useAuth } from '@/auth/useAuth';
 import { Toaster } from '@/components/ui/sonner';
 import { LoginScreen } from '@/screens/LoginScreen';
@@ -36,11 +37,11 @@ function Content() {
 
 export default function App() {
   return (
-    <>
+    <AnnounceProvider>
       <Shell>
         <Content />
       </Shell>
       <Toaster />
-    </>
+    </AnnounceProvider>
   );
 }

@@ -53,6 +53,11 @@ export function errorCode(error: unknown): string | undefined {
   return typeof code === 'string' ? code : undefined;
 }
 
+/** True for a 4xx envelope: something the API has to say about this attempt. */
+export function isEnvelopeError(error: unknown): boolean {
+  return !(error instanceof ServerError) && !isUnreachable(error) && errorCode(error) !== undefined;
+}
+
 /**
  * The message to show for a failed request: the envelope `message` exactly as
  * written, or the fallback for a 5xx or a body without one.

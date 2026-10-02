@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import { errorCode, errorMessage, isUnreachable, ServerError } from '@/api/errors';
+import { errorCode, errorMessage, isEnvelopeError } from '@/api/errors';
 import { loginMutation } from '@/client/@tanstack/react-query.gen';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,11 +10,6 @@ type Props = {
   /** Called with the new token once the API accepts the credentials. */
   onLoggedIn: (token: string) => void;
 };
-
-/** True for a 4xx envelope: something the API has to say about this attempt. */
-function isEnvelopeError(error: unknown): boolean {
-  return !(error instanceof ServerError) && !isUnreachable(error) && errorCode(error) !== undefined;
-}
 
 /**
  * The Login card (DESIGN.md Components > Login card): the app name, Username and

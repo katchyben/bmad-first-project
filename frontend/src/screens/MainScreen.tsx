@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { clearToken, getToken } from '@/api/token';
 import { logoutMutation } from '@/client/@tanstack/react-query.gen';
 import { Button } from '@/components/ui/button';
+import { AddTask } from '@/tasks/AddTask';
 import { TaskList } from '@/tasks/TaskList';
 
 const DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -18,8 +19,8 @@ export function formatHeadingDate(date: Date): string {
 
 /**
  * The logged-in main screen (DESIGN.md Layout): heading "Today", today's date
- * beneath it, and Log out at the right of the heading row, with the task list
- * below.
+ * beneath it, and Log out at the right of the heading row, then the add-task
+ * input and the task list.
  */
 export function MainScreen() {
   const pending = useRef(false);
@@ -63,8 +64,12 @@ export function MainScreen() {
           Log out
         </Button>
       </header>
+      {/* The status filter tabs (Epic 3) will sit between the header and the input. */}
       <div className="mt-heading-to-filter pb-12">
-        <TaskList />
+        <AddTask />
+        <div className="mt-input-to-list">
+          <TaskList />
+        </div>
       </div>
     </main>
   );

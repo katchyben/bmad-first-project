@@ -87,3 +87,102 @@ test('narrow: at 320px a long-titled list has no horizontal scroll', async ({ pa
   const name = await row.getAttribute('aria-label');
   expect(name?.startsWith(`${long}, To do, due `)).toBe(true);
 });
+
+const addInput = (page: Page) => page.getByRole('textbox', { name: 'Add a task' });
+
+test('adds a task by title + Enter and shows it in the list', async ({ page }) => {
+  await logIn(page);
+  const title = `Added task ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const input = addInput(page);
+  await input.click();
+  await input.fill(title);
+  await input.press('Enter');
+
+  const row = rows(page).filter({ hasText: title });
+  await expect(row).toBeVisible();
+  await expect(row).toHaveAccessibleName(`${title}, To do, due Tomorrow, 9:00 AM`);
+  await expect(input).toHaveValue('');
+  await expect(input).toBeFocused();
+  await expect(page.getByRole('status').filter({ hasText: 'Added' })).toHaveText(
+    `Added '${title}', due Tomorrow, 9:00 AM.`,
+  );
+  await expect(page.getByRole('button', { name: 'Tomorrow 9:00 AM' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
+test('adds a task with a description and the Next Monday preset', async ({ page }) => {
+  const token = await logIn(page);
+  const title = `Described task ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await addInput(page).fill(title);
+  await page.getByRole('button', { name: 'Next Monday 9:00 AM' }).click();
+  await page.getByRole('button', { name: 'Add description' }).click();
+  const description = page.getByRole('textbox', { name: 'Description' });
+  await expect(description).toBeFocused();
+  await description.fill('First line');
+  await description.press('Shift+Enter');
+  await description.pressSequentially('second line');
+  await description.press('Enter');
+
+  await expect(rows(page).filter({ hasText: title })).toBeVisible();
+  await expect(addInput(page)).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Add description' })).toBeVisible();
+
+  const response = await page.request.get('/api/tasks', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const created = ((await response.json()) as { title: string; description: string; due_at: string }[])
+    .find((t) => t.title === title)!;
+  expect(created.description).toBe('First line\nsecond line');
+  const due = await page.evaluate((iso) => {
+    const d = new Date(iso);
+    return { day: d.getDay(), hours: d.getHours(), minutes: d.getMinutes() };
+  }, created.due_at);
+  expect(due).toEqual({ day: 1, hours: 9, minutes: 0 });
+});
+
+test('shows a rejected blank title in the error slot and keeps the preset', async ({ page }) => {
+  await logIn(page);
+  await page.getByRole('button', { name: 'Next Monday 9:00 AM' }).click();
+  const input = addInput(page);
+  await input.press('Enter');
+  const alert = page.getByRole('alert').filter({ hasText: /\S/ });
+  await expect(alert).toBeVisible();
+  await expect(input).toHaveAttribute('aria-invalid', 'true');
+  await expect(input).toHaveAttribute('aria-describedby', (await alert.getAttribute('id'))!);
+  await expect(page.getByRole('button', { name: 'Next Monday 9:00 AM' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
+test('narrow: at 320px the add input, chips and link reflow with 24px targets', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await logIn(page);
+  await page.getByRole('button', { name: 'Add description' }).click();
+  await page.getByRole('textbox', { name: 'Description' }).fill('Some text');
+  await addInput(page).focus();
+  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  const targets = [
+    addInput(page),
+    page.getByRole('button', { name: 'Tomorrow 9:00 AM' }),
+    page.getByRole('button', { name: 'Next Monday 9:00 AM' }),
+    page.getByRole('textbox', { name: 'Description' }),
+  ];
+  for (const target of targets) {
+    const box = (await target.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+    expect(box.height).toBeGreaterThanOrEqual(24);
+  }
+  await page.getByRole('textbox', { name: 'Description' }).fill('');
+  await addInput(page).focus();
+  const link = (await page.getByRole('button', { name: 'Add description' }).boundingBox())!;
+  expect(link.height).toBeGreaterThanOrEqual(24);
+  expect(link.x + link.width).toBeLessThanOrEqual(320);
+});

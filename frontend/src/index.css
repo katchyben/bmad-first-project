@@ -82,6 +82,10 @@
 
   /* Still Water spacing (DESIGN.md `spacing`): `px-row-padding-x`, `gap-row-gap`, ... */
   --spacing-heading-to-filter: 26px;
+  --spacing-input-to-list: 18px;
+  --spacing-description-link-gap: 8px;
+  --spacing-add-input-padding-x: 16px;
+  --spacing-add-input-min-height: 48px;
   --spacing-row-padding-y: 16px;
   --spacing-row-padding-x: 22px;
   --spacing-row-gap: 12px;
@@ -108,6 +112,10 @@
   --text-empty-title--font-weight: 300;
   --text-caption: 13px;
   --text-caption--line-height: 1.5;
+  --text-chip: 11.5px;
+  --text-chip--line-height: 1.5;
+  --text-kbd: 10.5px;
+  --text-kbd--line-height: 16px;
 }
 
 :root {
