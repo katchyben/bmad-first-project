@@ -2,9 +2,10 @@
 title: 'Story 1.6a: Log in through the web app'
 type: 'feature'
 created: '2026-10-02'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: '2465a75e09e923b206feb114365bfff4fa273c7f'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
   - '{project-root}/_bmad-output/planning-artifacts/ux-designs/ux-bmad-first-project-2026-10-01/DESIGN.md'
@@ -59,12 +60,12 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `frontend/src/auth/useAuth.ts` (or similar) -- the auth state over the token store, plus the `onUnauthenticated` wiring -- AR11, UX-DR24
-- [ ] `frontend/src/screens/LoginScreen.tsx` -- the card, form, in-flight and error slot -- FR1, UX-DR24, UX-DR27
-- [ ] `frontend/src/App.tsx` -- switch Login and the logged-in view; document titles; focus on Login -- UX-DR27
-- [ ] `frontend/src/components/ui/button.tsx` -- motion per DESIGN.md -- UX-DR29
-- [ ] `frontend/src/**/*.test.tsx` -- every matrix row except Wiring and Narrow (Vitest with mocked fetch through the configured client) -- NFR6
-- [ ] `frontend/playwright.config.ts`, `frontend/e2e/login.spec.ts` -- account setup; valid login; invalid credentials keep the username and clear the password; the Wiring and Narrow rows -- NFR6
+- [x] `frontend/src/auth/useAuth.ts` (or similar) -- the auth state over the token store, plus the `onUnauthenticated` wiring -- AR11, UX-DR24
+- [x] `frontend/src/screens/LoginScreen.tsx` -- the card, form, in-flight and error slot -- FR1, UX-DR24, UX-DR27
+- [x] `frontend/src/App.tsx` -- switch Login and the logged-in view; document titles; focus on Login -- UX-DR27
+- [x] `frontend/src/components/ui/button.tsx` -- motion per DESIGN.md -- UX-DR29
+- [x] `frontend/src/**/*.test.tsx` -- every matrix row except Wiring and Narrow (Vitest with mocked fetch through the configured client) -- NFR6
+- [x] `frontend/playwright.config.ts`, `frontend/e2e/login.spec.ts` -- account setup; valid login; invalid credentials keep the username and clear the password; the Wiring and Narrow rows -- NFR6
 
 **Acceptance Criteria:**
 - Given `frontend/` under Node 24, when `npm run lint`, `npm run build`, `npm test` and `npm run e2e` run, then all pass, and `uv run pytest` still passes.
@@ -74,6 +75,25 @@ context:
 ## Spec Change Log
 
 ## Review Triage Log
+
+Pass 1 (blind = B, edge-case = E, verification-gap = V):
+
+| # | Finding | Verdict | Evidence | Route |
+|---|---------|---------|----------|-------|
+| E7 | With a controlling terminal, `create-account` reads the password from `/dev/tty`, so the piped e2e account setup hangs | high | Reproduced under `script` (a pty): it prints "Username: Password:" and hangs until a 15 s timeout; no account row. Running `npm run e2e` from a terminal would fail | patch (in `cli.run`: read the password lines from stdin when stdin isn't a TTY) |
+| B1/E4/V1 | A token change from another tab (`storage` event) flips the view but doesn't clear the query cache or toasts; the listener is untested | medium | `queryClient.clear()`/`toast.dismiss()` run only in `logIn` and the 401 hook; no test dispatches a `StorageEvent` | patch |
+| E5 | A stored empty-string token counts as logged in, but no header is sent, so the user is stuck | low | A direct correction (`Boolean(token)`) | patch |
+| E6/B8 | `printf '${accountInput}'` breaks on `'` or `%` in the e2e credentials | low | Use `printf '%s\n' …` with separate quoted arguments; a direct correction | patch |
+| B4/E3/V2 | An empty submit (422 `validation_error`) path is untested | low | V: dropping the `unauthenticated` guard or narrowing `isEnvelopeError` keeps tests green | patch (test) |
+| B5/V3 | A login 5xx test never asserts the global toast appears | low | It only asserts what doesn't happen | patch (test) |
+| E8/B3 | The wiring probe calls the real `logout` | low | No read-only authenticated route exists yet; the test ends right after; add a comment saying why | patch (comment) |
+| B10b | `client.ts` comment "1.6 routes to Login" is outdated | low | Routing is driven by the token store; a direct comment fix | patch |
+| B2/E1 | `setToken` throws when storage is unavailable, failing login | low | Not silent: the throw from `onSuccess` reaches the global mutation `onError`, which shows "Something went wrong. Try again." (no envelope); storage-blocked browsers are rare | reject |
+| E2 | A 4xx envelope message with no `code` shows nothing | false | The API's envelope always carries a `code` (1.1b) | reject |
+| B6 | Error and `aria-invalid` persist while the user edits | low | A common pattern (persist until next submit); the spec doesn't ask otherwise | reject |
+| B7 | The error slot collapses during a retry, shifting Log in | low | Cosmetic | reject |
+| B9 | The Button motion change has no story note | false | The spec's Boundaries list it explicitly (deferred from 1.3b) | reject |
+| B10a | Redundant `ServerError`/`isUnreachable` checks in `isEnvelopeError` | low | Cosmetic | reject |
 
 ## Design Notes
 

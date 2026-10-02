@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { ServerError } from '@/api/errors';
+import { logout } from '@/client/sdk.gen';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -51,6 +52,13 @@ export default function DesignCheck() {
       .catch(() => {});
   }
 
+  // Send one request through the configured client (e2e/login.spec.ts checks its URL and header).
+  // It uses logout only because no read-only authenticated route exists yet (Epic 2
+  // adds them), so it ends the session.
+  function sendAuthenticatedRequest() {
+    void logout();
+  }
+
   return (
     <main className="flex flex-col items-start gap-4 p-4">
       <Button data-testid="button">Button</Button>
@@ -88,6 +96,9 @@ export default function DesignCheck() {
       <kbd data-testid="kbd">Esc</kbd>
       <Button data-testid="server-error" variant="outline" onClick={failQuery}>
         Fail a query
+      </Button>
+      <Button data-testid="auth-request" variant="outline" onClick={sendAuthenticatedRequest}>
+        Send an authenticated request
       </Button>
       <ul aria-hidden="true" className="flex flex-wrap gap-1">
         {Object.entries(SWATCHES).map(([token, className]) => (

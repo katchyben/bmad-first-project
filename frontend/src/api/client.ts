@@ -11,7 +11,10 @@ type UnauthenticatedHandler = () => void;
 
 let onUnauthenticated: UnauthenticatedHandler = () => {};
 
-/** Register what happens after a rejected token is cleared (1.6 routes to Login). */
+/**
+ * Register what happens after a rejected token is cleared. The token store drives
+ * the view (clearing it shows Login); the app's hook clears toasts and the query cache.
+ */
 export function setOnUnauthenticated(handler: UnauthenticatedHandler): void {
   onUnauthenticated = handler;
 }

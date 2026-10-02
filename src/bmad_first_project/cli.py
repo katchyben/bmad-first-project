@@ -31,6 +31,19 @@ PASSWORD_MISMATCH_MESSAGE = "Those passwords don't match."
 CANCELLED_MESSAGE = "Cancelled. Nothing was changed."
 
 
+def _stdin_secret(stderr: TextIO) -> Prompt:
+    """A secret prompt for piped input: one line from stdin, without its newline."""
+
+    def prompt_secret(text: str) -> str:
+        print(text, end="", file=stderr, flush=True)
+        line = sys.stdin.readline()
+        if line == "":
+            raise EOFError
+        return line.removesuffix("\n").removesuffix("\r")
+
+    return prompt_secret
+
+
 def run(
     *,
     prompt: Prompt | None = None,
@@ -44,13 +57,16 @@ def run(
     """Create the account or change its password; return the exit code.
 
     Every collaborator can be injected; each one left out is the real thing.
-    The password is read with `getpass` (no echo in a terminal) and is never
-    printed or logged.
+    In a terminal the password is read with `getpass` (no echo); piped input
+    is read line by line from stdin. It is never printed or logged.
     """
     prompt = prompt if prompt is not None else input
-    prompt_secret = prompt_secret if prompt_secret is not None else getpass.getpass
     stdout = stdout if stdout is not None else sys.stdout
     stderr = stderr if stderr is not None else sys.stderr
+    if prompt_secret is None:
+        # getpass reads /dev/tty when there is one, so piped input would be
+        # ignored (and the command would wait). Read piped passwords from stdin.
+        prompt_secret = getpass.getpass if sys.stdin.isatty() else _stdin_secret(stderr)
     clock = clock if clock is not None else SystemClock()
     hasher = hasher if hasher is not None else Argon2PasswordHasher()
 

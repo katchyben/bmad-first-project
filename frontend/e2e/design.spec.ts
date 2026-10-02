@@ -169,8 +169,29 @@ test('the fade applies no transition under prefers-reduced-motion: reduce', asyn
   expect({ property, duration }).toEqual({ property: 'none', duration: '0s' });
 });
 
-test('without ?design-check the placeholder renders', async ({ page }) => {
+test('without ?design-check the app renders, not the fixture', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
+  await expect(page.getByTestId('button')).toHaveCount(0);
+
+  // With a stored token, the logged-in placeholder.
+  await page.evaluate(() => localStorage.setItem('todo.auth_token', 'any'));
+  await page.reload();
   await expect(page.getByRole('main')).toHaveText('Todo');
   await expect(page.getByTestId('button')).toHaveCount(0);
+});
+
+test('a Button fades colour and opacity only and does not move when pressed', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  expect(await style(page, 'button', 'transition-property')).toBe(
+    'color, background-color, border-color, opacity',
+  );
+  const button = page.getByTestId('button');
+  const box = (await button.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  expect(await style(page, 'button', 'translate')).toBe('none');
+  expect(await style(page, 'button', 'transform')).toBe('none');
+  await page.mouse.up();
 });

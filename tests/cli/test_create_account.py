@@ -241,6 +241,16 @@ def test_password_never_leaks(
             assert secret.encode() not in path.read_bytes(), path
 
 
+class _TtyStdin(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+class _PipedStdin(io.StringIO):
+    def isatty(self) -> bool:
+        return False
+
+
 def test_entry_point_wires_the_real_adapters(
     database_url: str,
     migrated_engine: Engine,
@@ -249,6 +259,7 @@ def test_entry_point_wires_the_real_adapters(
 ) -> None:
     secrets = iter(["s3cret", "s3cret"])
     monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setattr("sys.stdin", _TtyStdin())
     monkeypatch.setattr("builtins.input", lambda _: "benny")
     monkeypatch.setattr(getpass, "getpass", lambda _: next(secrets))
 
@@ -308,3 +319,42 @@ def test_failed_run_keeps_sessions(
     assert run_cli("benny", "n3w-pass", "mismatch").code == 1
 
     assert _session_count(migrated_engine) == 1
+
+
+@pytest.mark.parametrize(
+    ("piped", "code", "expected_out", "expected_err"),
+    [
+        ("benny\ns3cret\ns3cret\n", 0, "Account 'benny' created.\n", None),
+        ("benny\ns3cret\n", 1, "", "Cancelled. Nothing was changed."),
+    ],
+)
+def test_piped_input_reads_passwords_from_stdin_without_getpass(
+    database_url: str,
+    migrated_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    piped: str,
+    code: int,
+    expected_out: str,
+    expected_err: str | None,
+) -> None:
+    def no_getpass(_: str) -> str:
+        raise AssertionError("getpass must not be used for piped input")
+
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setattr("sys.stdin", _PipedStdin(piped))
+    monkeypatch.setattr(getpass, "getpass", no_getpass)
+
+    with pytest.raises(SystemExit) as caught:
+        cli.create_account()
+
+    assert caught.value.code == code
+    captured = capsys.readouterr()
+    assert captured.out.endswith(expected_out)
+    assert "s3cret" not in captured.out + captured.err
+    if expected_err is not None:
+        assert captured.err.strip().endswith(expected_err)
+        assert _rows(migrated_engine) == []
+    else:
+        [(_, password_hash)] = _rows(migrated_engine)
+        assert VERIFIER.verify("s3cret", password_hash)

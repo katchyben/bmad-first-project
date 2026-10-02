@@ -44,6 +44,15 @@ function envelopeMessage(error: unknown): string | undefined {
   return typeof message === 'string' && message !== '' ? message : undefined;
 }
 
+/** The envelope `code` of a 4xx failure (e.g. `unauthenticated`), or undefined. */
+export function errorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('error' in error)) return undefined;
+  const body = (error as { error: unknown }).error;
+  if (typeof body !== 'object' || body === null || !('code' in body)) return undefined;
+  const code = (body as { code: unknown }).code;
+  return typeof code === 'string' ? code : undefined;
+}
+
 /**
  * The message to show for a failed request: the envelope `message` exactly as
  * written, or the fallback for a 5xx or a body without one.
