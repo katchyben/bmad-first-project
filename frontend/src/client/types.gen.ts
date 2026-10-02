@@ -270,6 +270,48 @@ export type CreateTaskResponses = {
 
 export type CreateTaskResponse = CreateTaskResponses[keyof CreateTaskResponses];
 
+export type DeleteTaskData = {
+    body?: never;
+    path: {
+        /**
+         * Task Id
+         */
+        task_id: number;
+    };
+    query?: never;
+    url: '/api/tasks/{task_id}';
+};
+
+export type DeleteTaskErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type DeleteTaskError = DeleteTaskErrors[keyof DeleteTaskErrors];
+
+export type DeleteTaskResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteTaskResponse = DeleteTaskResponses[keyof DeleteTaskResponses];
+
 export type GetTaskData = {
     body?: never;
     path: {

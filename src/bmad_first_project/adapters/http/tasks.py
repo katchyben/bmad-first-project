@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Annotated, Self
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from pydantic import (
     AfterValidator,
     AwareDatetime,
@@ -162,3 +162,14 @@ def edit_task(
     """
     changes = {name: getattr(body, name) for name in body.model_fields_set}
     return TaskResponse.from_view(tasks.edit_task(uow, now, task_id, **changes))
+
+
+@router.delete(
+    "/{task_id}",
+    status_code=204,
+    response_class=Response,
+    responses=error_responses(401, 404, 409),
+)
+def delete_task(session: CurrentSessionDep, task_id: int, uow: UnitOfWorkDep) -> None:
+    """Permanently delete a To do task. There is no undo."""
+    tasks.delete_task(uow, task_id)

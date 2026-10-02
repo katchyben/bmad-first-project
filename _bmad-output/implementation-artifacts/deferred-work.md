@@ -66,3 +66,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-edit-a-task-through-the-api.md`
   summary: Task use cases read with `get` then write the whole task with `save`, so a concurrent request changing status (Epic 3 actions) or deleting the task between the two can be overwritten, or surface `LookupError` as a 500.
   evidence: AD-15's whole-task `save`; unverified under real concurrency (a single user on SQLite). It would need two overlapping requests on one task, and is worth an optimistic guard (`UPDATE … WHERE id AND status`) when Epic 3 adds status actions.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-4-delete-a-task-through-the-api.md`
+  summary: `delete_task` checks To do on a read, then deletes by ID only, so a concurrent start or finish between the two could still delete a task that is no longer To do.
+  evidence: the same read-then-write class as the 2.3 entry. Unverified under real concurrency (a single user on SQLite); handle it with that entry's optimistic guard when Epic 3 adds status actions.

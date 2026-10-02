@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from bmad_first_project.adapters.persistence.tables import TaskRow
@@ -67,3 +67,6 @@ class SqlTaskRepository:
         row.finished_at = task.finished_at
         row.previous_status = _status_value(task.previous_status)
         self._session.flush()
+
+    def delete(self, task_id: int) -> None:
+        self._session.execute(delete(TaskRow).where(TaskRow.id == task_id))

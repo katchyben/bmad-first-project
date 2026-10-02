@@ -10,6 +10,7 @@ import pytest
 
 from bmad_first_project.application.tasks import (
     create_task,
+    delete_task,
     edit_task,
     get_task,
     list_tasks,
@@ -22,6 +23,7 @@ from bmad_first_project.domain.errors import (
 from bmad_first_project.domain.task import (
     BLANK_TITLE_MESSAGE,
     FINISHED_TASK_MESSAGE,
+    NOT_DELETABLE_MESSAGE,
     PAST_DUE_MESSAGE,
     TASK_NOT_FOUND_MESSAGE,
     Task,
@@ -39,6 +41,7 @@ class MemoryTasks:
         self.rows: list[Task] = []
         self.gets: list[int] = []
         self.saves: list[Task] = []
+        self.deletes: list[int] = []
 
     def add(self, task: Task) -> Task:
         stored = replace(task, id=len(self.rows) + 1)
@@ -58,6 +61,10 @@ class MemoryTasks:
         if task.id is None or index is None:
             raise LookupError("Only a task returned by `get` can be saved.")
         self.rows[index] = task
+
+    def delete(self, task_id: int) -> None:
+        self.deletes.append(task_id)
+        self.rows = [t for t in self.rows if t.id != task_id]
 
 
 class FakeUnitOfWork:
@@ -250,4 +257,43 @@ def test_a_broken_rule_on_edit_saves_nothing(uow: FakeUnitOfWork) -> None:
 
     assert caught.value.message == BLANK_TITLE_MESSAGE
     assert uow.tasks.saves == []
+    assert uow.tasks.rows == [task]
+
+
+def test_delete_removes_a_to_do_task(uow: FakeUnitOfWork) -> None:
+    kept = create_task(uow, NOW, "Keep", None, TOMORROW).task
+    task = create_task(uow, NOW, "Pay rent", None, TOMORROW).task
+    assert task.id is not None
+
+    delete_task(uow, task.id)
+
+    assert uow.tasks.deletes == [task.id]
+    assert uow.tasks.rows == [kept]
+
+
+@pytest.mark.parametrize("task_id", [999, -1, 2**63, -(2**63) - 1])
+def test_delete_of_a_missing_id_is_not_found(uow: FakeUnitOfWork, task_id: int) -> None:
+    with pytest.raises(NotFoundError) as caught:
+        delete_task(uow, task_id)
+
+    assert caught.value.message == TASK_NOT_FOUND_MESSAGE
+    assert uow.tasks.deletes == []
+
+
+@pytest.mark.parametrize(
+    "status", [TaskStatus.IN_PROGRESS, TaskStatus.DONE, TaskStatus.CANCELLED]
+)
+def test_delete_of_a_task_not_to_do_is_a_state_conflict(
+    uow: FakeUnitOfWork, status: TaskStatus
+) -> None:
+    task = uow.tasks.add(
+        replace(new_task("Pay rent", None, TOMORROW, NOW), status=status)
+    )
+    assert task.id is not None
+
+    with pytest.raises(StateConflictError) as caught:
+        delete_task(uow, task.id)
+
+    assert caught.value.message == NOT_DELETABLE_MESSAGE
+    assert uow.tasks.deletes == []
     assert uow.tasks.rows == [task]

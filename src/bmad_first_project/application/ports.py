@@ -78,6 +78,10 @@ class TaskRepository(Protocol):
         """
         ...
 
+    def delete(self, task_id: int) -> None:
+        """Delete the task with this ID, if it exists."""
+        ...
+
 
 class UnitOfWork(Protocol):
     """One transaction, used as a context manager.

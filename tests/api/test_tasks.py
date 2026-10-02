@@ -422,7 +422,7 @@ def test_openapi_declares_list_and_get_task(app: FastAPI) -> None:
     assert listing["responses"]["401"]["content"]["application/json"] == envelope
 
     path = f"{TASKS_URL}/{{task_id}}"
-    assert set(schema["paths"][path]) == {"get", "patch"}
+    assert set(schema["paths"][path]) == {"get", "patch", "delete"}
     one = schema["paths"][path]["get"]
     assert one["operationId"] == "get_task"
     assert one["security"] == [{"OAuth2PasswordBearer": []}]
@@ -818,3 +818,117 @@ def test_openapi_declares_edit_task(app: FastAPI) -> None:
         },
         "due_at": {"type": "string", "format": "date-time", "title": "Due At"},
     }
+
+
+def _store_status(engine: Engine, status: TaskStatus) -> Task:
+    with SqlUnitOfWork(engine) as uow:
+        return uow.tasks.add(
+            Task(
+                title="Pay rent",
+                description=None,
+                due_at=FIXED_NOW + timedelta(days=1),
+                status=status,
+                created_at=FIXED_NOW,
+            )
+        )
+
+
+def test_delete_removes_a_to_do_task_and_get_is_404(
+    client: TestClient, headers: dict[str, str], migrated_engine: Engine
+) -> None:
+    kept = _store_status(migrated_engine, TaskStatus.TO_DO)
+    gone = _store_status(migrated_engine, TaskStatus.TO_DO)
+
+    response = client.delete(_url(gone), headers=headers)
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert client.get(_url(gone), headers=headers).status_code == 404
+    listed = client.get(TASKS_URL, headers=headers).json()
+    assert [task["id"] for task in listed] == [kept.id]
+    again = client.delete(_url(gone), headers=headers)
+    assert again.status_code == 404
+    assert again.json() == NOT_FOUND_BODY
+    assert _task_count(migrated_engine) == 1
+    assert kept.id is not None
+    assert stored_task(migrated_engine, kept.id) == kept
+
+
+@pytest.mark.parametrize("task_id", ["999", "0", "-1", str(2**63), str(-(2**63) - 1)])
+def test_delete_of_a_missing_id_is_404(
+    client: TestClient, headers: dict[str, str], migrated_engine: Engine, task_id: str
+) -> None:
+    _store_status(migrated_engine, TaskStatus.TO_DO)
+
+    response = client.delete(f"{TASKS_URL}/{task_id}", headers=headers)
+
+    assert response.status_code == 404
+    assert response.json() == NOT_FOUND_BODY
+    assert _task_count(migrated_engine) == 1
+
+
+def test_delete_of_a_non_integer_id_is_the_generic_422(
+    client: TestClient, headers: dict[str, str]
+) -> None:
+    response = client.delete(f"{TASKS_URL}/abc", headers=headers)
+
+    assert response.status_code == 422
+    assert response.json() == VALIDATION_BODY
+
+
+@pytest.mark.parametrize(
+    "status", [TaskStatus.IN_PROGRESS, TaskStatus.DONE, TaskStatus.CANCELLED]
+)
+def test_delete_of_a_task_not_to_do_is_409_and_keeps_it(
+    client: TestClient,
+    headers: dict[str, str],
+    migrated_engine: Engine,
+    status: TaskStatus,
+) -> None:
+    task = _store_status(migrated_engine, status)
+    assert task.id is not None
+
+    response = client.delete(_url(task), headers=headers)
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "error": {
+            "code": "state_conflict",
+            "message": "Only a To do task can be deleted.",
+        }
+    }
+    assert stored_task(migrated_engine, task.id) == task
+
+
+@pytest.mark.parametrize(
+    "auth",
+    [
+        pytest.param({}, id="missing"),
+        pytest.param({"Authorization": "Bearer unknown-token"}, id="invalid"),
+    ],
+)
+@pytest.mark.parametrize("path", ["{id}", "999", "abc"])
+def test_delete_without_a_valid_token_is_401_and_keeps_the_task(
+    client: TestClient, migrated_engine: Engine, auth: dict[str, str], path: str
+) -> None:
+    task = _store_status(migrated_engine, TaskStatus.TO_DO)
+
+    response = client.delete(f"{TASKS_URL}/{path.format(id=task.id)}", headers=auth)
+
+    assert response.status_code == 401
+    assert response.json() == LOG_IN_BODY
+    assert _task_count(migrated_engine) == 1
+
+
+def test_openapi_declares_delete_task(app: FastAPI) -> None:
+    schema = TestClient(app).get("/openapi.json").json()
+    operation = schema["paths"][f"{TASKS_URL}/{{task_id}}"]["delete"]
+
+    assert operation["operationId"] == "delete_task"
+    assert operation["security"] == [{"OAuth2PasswordBearer": []}]
+    assert set(operation["responses"]) == {"204", "401", "404", "409", "422"}
+    assert "content" not in operation["responses"]["204"]
+    for status in ("401", "404", "409", "422"):
+        assert operation["responses"][status]["content"]["application/json"] == {
+            "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+        }

@@ -11,6 +11,7 @@ from bmad_first_project.domain.task import (
     Task,
     TaskView,
     Unset,
+    check_deletable,
     new_task,
     order_tasks,
     view_task,
@@ -77,6 +78,18 @@ def edit_task(
     )
     uow.tasks.save(edited)
     return view_task(edited, now)
+
+
+def delete_task(uow: UnitOfWork, task_id: int) -> None:
+    """Permanently delete a To do task.
+
+    `uow` must be active; the caller commits it. A missing ID raises
+    `NotFoundError`, then a task that isn't To do `StateConflictError`; nothing
+    is deleted on either.
+    """
+    task = _existing(uow, task_id)
+    check_deletable(task)
+    uow.tasks.delete(task_id)
 
 
 def _existing(uow: UnitOfWork, task_id: int) -> Task:

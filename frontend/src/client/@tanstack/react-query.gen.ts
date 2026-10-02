@@ -4,8 +4,8 @@
 import { queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createTask, editTask, getTask, listTasks, login, logout, type Options } from '../sdk.gen';
-import type { CreateTaskData, CreateTaskError, CreateTaskResponse, EditTaskData, EditTaskError, EditTaskResponse, GetTaskData, GetTaskError, GetTaskResponse, ListTasksData, ListTasksError, ListTasksResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse } from '../types.gen';
+import { createTask, deleteTask, editTask, getTask, listTasks, login, logout, type Options } from '../sdk.gen';
+import type { CreateTaskData, CreateTaskError, CreateTaskResponse, DeleteTaskData, DeleteTaskError, DeleteTaskResponse, EditTaskData, EditTaskError, EditTaskResponse, GetTaskData, GetTaskError, GetTaskResponse, ListTasksData, ListTasksError, ListTasksResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse } from '../types.gen';
 
 /**
  * Login
@@ -107,6 +107,25 @@ export const createTaskMutation = (options?: Partial<Options<CreateTaskData>>): 
     const mutationOptions: UseMutationOptions<CreateTaskResponse, CreateTaskError, Options<CreateTaskData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await createTask({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Delete Task
+ *
+ * Permanently delete a To do task. There is no undo.
+ */
+export const deleteTaskMutation = (options?: Partial<Options<DeleteTaskData>>): UseMutationOptions<DeleteTaskResponse, DeleteTaskError, Options<DeleteTaskData>> => {
+    const mutationOptions: UseMutationOptions<DeleteTaskResponse, DeleteTaskError, Options<DeleteTaskData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteTask({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

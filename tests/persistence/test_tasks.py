@@ -248,3 +248,32 @@ def test_tasks_is_unavailable_outside_the_unit_of_work(
         _ = uow.tasks
     with pytest.raises(RuntimeError):
         _ = uow.tasks
+
+
+def test_delete_removes_only_that_task(migrated_engine: Engine) -> None:
+    with SqlUnitOfWork(migrated_engine) as uow:
+        kept = uow.tasks.add(_task("Kept"))
+        gone = uow.tasks.add(_task("Gone"))
+    assert gone.id is not None
+
+    with SqlUnitOfWork(migrated_engine) as uow:
+        uow.tasks.delete(gone.id)
+        uow.tasks.delete(999)
+
+    with SqlUnitOfWork(migrated_engine) as uow:
+        assert uow.tasks.get(gone.id) is None
+        assert uow.tasks.list() == [kept]
+
+
+def test_delete_after_get_in_one_unit_of_work_leaves_nothing_cached(
+    migrated_engine: Engine,
+) -> None:
+    with SqlUnitOfWork(migrated_engine) as uow:
+        task = uow.tasks.add(_task())
+    assert task.id is not None
+
+    with SqlUnitOfWork(migrated_engine) as uow:
+        assert uow.tasks.get(task.id) == task
+        uow.tasks.delete(task.id)
+        assert uow.tasks.get(task.id) is None
+        assert uow.tasks.list() == []

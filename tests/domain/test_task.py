@@ -1,5 +1,7 @@
-"""Task value rules applied by `new_task` and `edit_task` against an explicit `now`."""
+"""Task rules: `new_task` and `edit_task` against an explicit `now`, `check_deletable`,
+the view and the order."""
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
@@ -9,12 +11,14 @@ from bmad_first_project.domain.task import (
     BLANK_TITLE_MESSAGE,
     DESCRIPTION_TOO_LONG_MESSAGE,
     FINISHED_TASK_MESSAGE,
+    NOT_DELETABLE_MESSAGE,
     PAST_DUE_MESSAGE,
     TASK_NOT_FOUND_MESSAGE,
     TITLE_TOO_LONG_MESSAGE,
     Task,
     TaskStatus,
     TaskView,
+    check_deletable,
     edit_task,
     new_task,
     order_tasks,
@@ -458,3 +462,24 @@ def test_edit_with_a_naive_due_at_or_now_is_a_value_error() -> None:
     with pytest.raises(ValueError) as caught:
         edit_task(_editable(), NOW.replace(tzinfo=None), due_at=TOMORROW)
     assert not isinstance(caught.value, DomainValidationError)
+
+
+def test_not_deletable_message_is_the_agreed_string() -> None:
+    assert NOT_DELETABLE_MESSAGE == "Only a To do task can be deleted."
+
+
+def test_a_to_do_task_can_be_deleted() -> None:
+    check_deletable(new_task("Pay rent", None, TOMORROW, NOW))
+
+
+@pytest.mark.parametrize(
+    "status", [TaskStatus.IN_PROGRESS, TaskStatus.DONE, TaskStatus.CANCELLED]
+)
+def test_only_a_to_do_task_can_be_deleted(status: TaskStatus) -> None:
+    task = replace(new_task("Pay rent", None, TOMORROW, NOW), status=status)
+
+    with pytest.raises(StateConflictError) as caught:
+        check_deletable(task)
+
+    assert caught.value.message == "Only a To do task can be deleted."
+    assert caught.value.reason is None

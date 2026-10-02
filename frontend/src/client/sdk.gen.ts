@@ -3,7 +3,7 @@
 
 import { type Client, type ClientMeta, type Options as Options2, type RequestResult, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { CreateTaskData, CreateTaskErrors, CreateTaskResponses, EditTaskData, EditTaskErrors, EditTaskResponses, GetTaskData, GetTaskErrors, GetTaskResponses, ListTasksData, ListTasksErrors, ListTasksResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses } from './types.gen';
+import type { CreateTaskData, CreateTaskErrors, CreateTaskResponses, DeleteTaskData, DeleteTaskErrors, DeleteTaskResponses, EditTaskData, EditTaskErrors, EditTaskResponses, GetTaskData, GetTaskErrors, GetTaskResponses, ListTasksData, ListTasksErrors, ListTasksResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -69,6 +69,17 @@ export const createTask = <ThrowOnError extends boolean = false>(options: Option
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Delete Task
+ *
+ * Permanently delete a To do task. There is no undo.
+ */
+export const deleteTask = <ThrowOnError extends boolean = false>(options: Options<DeleteTaskData, ThrowOnError>): RequestResult<DeleteTaskResponses, DeleteTaskErrors, ThrowOnError> => (options.client ?? client).delete<DeleteTaskResponses, DeleteTaskErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/tasks/{task_id}',
+    ...options
 });
 
 /**

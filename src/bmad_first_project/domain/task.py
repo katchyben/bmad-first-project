@@ -18,6 +18,7 @@ DESCRIPTION_TOO_LONG_MESSAGE = "Keep the description to 5,000 characters or fewe
 PAST_DUE_MESSAGE = "That time has already passed."
 TASK_NOT_FOUND_MESSAGE = "That task no longer exists."
 FINISHED_TASK_MESSAGE = "That task is finished and can't be changed."
+NOT_DELETABLE_MESSAGE = "Only a To do task can be deleted."
 
 
 class TaskStatus(StrEnum):
@@ -136,6 +137,12 @@ def edit_task(
             check_due_at(due_at, now)
         changes["due_at"] = due_at.astimezone(UTC)
     return replace(task, **changes)
+
+
+def check_deletable(task: Task) -> None:
+    """Only a To do task can be deleted; any other status is a state conflict."""
+    if task.status is not TaskStatus.TO_DO:
+        raise StateConflictError(NOT_DELETABLE_MESSAGE)
 
 
 @dataclass(frozen=True)
