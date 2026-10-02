@@ -6,6 +6,7 @@ from typing import Protocol, Self
 
 from bmad_first_project.domain.account import Account
 from bmad_first_project.domain.session import UserSession
+from bmad_first_project.domain.task import Task
 
 
 class Clock(Protocol):
@@ -52,6 +53,18 @@ class SessionStore(Protocol):
     def delete_all(self) -> None: ...
 
 
+class TaskRepository(Protocol):
+    """Tasks by ID. Never commits, orders or raises domain errors; the use case does."""
+
+    def add(self, task: Task) -> Task:
+        """Store a new task and return it with its database ID."""
+        ...
+
+    def get(self, task_id: int) -> Task | None:
+        """The task with this ID, or None when there is none."""
+        ...
+
+
 class UnitOfWork(Protocol):
     """One transaction, used as a context manager.
 
@@ -65,6 +78,9 @@ class UnitOfWork(Protocol):
 
     @property
     def sessions(self) -> SessionStore: ...
+
+    @property
+    def tasks(self) -> TaskRepository: ...
 
     def __enter__(self) -> Self: ...
 

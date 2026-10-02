@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from bmad_first_project.adapters.persistence.accounts import SqlAccountStore
 from bmad_first_project.adapters.persistence.sessions import SqlSessionStore
+from bmad_first_project.adapters.persistence.tasks import SqlTaskRepository
 
 
 class SqlUnitOfWork:
@@ -18,6 +19,7 @@ class SqlUnitOfWork:
         self._session: Session | None = None
         self._accounts: SqlAccountStore | None = None
         self._sessions: SqlSessionStore | None = None
+        self._tasks: SqlTaskRepository | None = None
 
     @property
     def session(self) -> Session:
@@ -40,12 +42,20 @@ class SqlUnitOfWork:
             raise RuntimeError("SqlUnitOfWork is not active; use it in a `with` block.")
         return self._sessions
 
+    @property
+    def tasks(self) -> SqlTaskRepository:
+        """The task repository, bound to this unit of work's session."""
+        if self._tasks is None:
+            raise RuntimeError("SqlUnitOfWork is not active; use it in a `with` block.")
+        return self._tasks
+
     def __enter__(self) -> Self:
         if self._session is not None:
             raise RuntimeError("SqlUnitOfWork is already active.")
         self._session = Session(self._engine)
         self._accounts = SqlAccountStore(self._session)
         self._sessions = SqlSessionStore(self._session)
+        self._tasks = SqlTaskRepository(self._session)
         return self
 
     def __exit__(
@@ -67,3 +77,4 @@ class SqlUnitOfWork:
                 self._session = None
                 self._accounts = None
                 self._sessions = None
+                self._tasks = None

@@ -6,9 +6,11 @@ constraint has a stable name that SQLite batch migrations can refer to.
 
 from datetime import datetime
 
+from sqlalchemy import CheckConstraint
 from sqlmodel import Field, SQLModel
 
 from bmad_first_project.adapters.persistence.types import UTCDateTime
+from bmad_first_project.domain.task import TaskStatus
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -37,3 +39,25 @@ class SessionRow(SQLModel, table=True):
     token_hash: str = Field(unique=True)
     account_id: int = Field(foreign_key="account.id", ondelete="CASCADE")
     expires_at: datetime = Field(sa_type=UTCDateTime)
+
+
+_TASK_STATUS_VALUES = ", ".join(f"'{status.value}'" for status in TaskStatus)
+
+
+class TaskRow(SQLModel, table=True):
+    __tablename__ = "tasks"
+    __table_args__ = (
+        CheckConstraint(f"status IN ({_TASK_STATUS_VALUES})", name="status"),
+        CheckConstraint(
+            f"previous_status IN ({_TASK_STATUS_VALUES})", name="previous_status"
+        ),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    title: str
+    description: str | None = None
+    due_at: datetime = Field(sa_type=UTCDateTime)
+    status: str
+    created_at: datetime = Field(sa_type=UTCDateTime)
+    finished_at: datetime | None = Field(default=None, sa_type=UTCDateTime)
+    previous_status: str | None = None

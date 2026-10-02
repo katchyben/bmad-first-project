@@ -1,0 +1,48 @@
+"""The SQL `TaskRepository`. Never commits, orders or raises domain errors."""
+
+from dataclasses import replace
+
+from sqlalchemy.orm import Session
+
+from bmad_first_project.adapters.persistence.tables import TaskRow
+from bmad_first_project.domain.task import Task, TaskStatus
+
+
+def _to_domain(row: TaskRow) -> Task:
+    return Task(
+        id=row.id,
+        title=row.title,
+        description=row.description,
+        due_at=row.due_at,
+        status=TaskStatus(row.status),
+        created_at=row.created_at,
+        finished_at=row.finished_at,
+        previous_status=(
+            None if row.previous_status is None else TaskStatus(row.previous_status)
+        ),
+    )
+
+
+class SqlTaskRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def add(self, task: Task) -> Task:
+        row = TaskRow(
+            title=task.title,
+            description=task.description,
+            due_at=task.due_at,
+            status=task.status.value,
+            created_at=task.created_at,
+            finished_at=task.finished_at,
+            previous_status=(
+                None if task.previous_status is None else task.previous_status.value
+            ),
+        )
+        self._session.add(row)
+        self._session.flush()
+        return replace(task, id=row.id)
+
+    def get(self, task_id: int) -> Task | None:
+        row = self._session.get(TaskRow, task_id)
+        return None if row is None else _to_domain(row)

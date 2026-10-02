@@ -173,13 +173,13 @@ def test_sessions_is_unavailable_outside_the_unit_of_work(
 REBUILD_ACCOUNT = '''"""Test-only: rebuild the account table the way SQLite batch mode does.
 
 Revision ID: 9999
-Revises: 0003
+Revises: 0004
 """
 
 from alembic import op
 
 revision = "9999"
-down_revision = "0003"
+down_revision = "0004"
 branch_labels = None
 depends_on = None
 
@@ -290,7 +290,7 @@ def test_broken_foreign_keys_fail_the_migration_and_roll_it_back(
         engine.dispose()
         after = _snapshot(engine)
         assert after == before
-        assert after["version"] == [("0003",)]
+        assert after["version"] == [("0004",)]
         assert "nickname" not in after["account_columns"]
     finally:
         engine.dispose()

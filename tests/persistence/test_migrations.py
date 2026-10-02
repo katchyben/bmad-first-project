@@ -43,6 +43,7 @@ def test_upgrade_creates_missing_directory_and_reaches_head(
         "alembic_version",
         "account",
         "sessions",
+        "tasks",
     }
     assert_schema_current(engine)
 
