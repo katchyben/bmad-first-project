@@ -192,6 +192,37 @@ export type LogoutResponses = {
 
 export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
 
+export type ListTasksData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/tasks';
+};
+
+export type ListTasksErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type ListTasksError = ListTasksErrors[keyof ListTasksErrors];
+
+export type ListTasksResponses = {
+    /**
+     * Response List Tasks
+     *
+     * Successful Response
+     */
+    200: Array<TaskResponse>;
+};
+
+export type ListTasksResponse = ListTasksResponses[keyof ListTasksResponses];
+
 export type CreateTaskData = {
     body: CreateTaskBody;
     path?: never;
@@ -220,3 +251,41 @@ export type CreateTaskResponses = {
 };
 
 export type CreateTaskResponse = CreateTaskResponses[keyof CreateTaskResponses];
+
+export type GetTaskData = {
+    body?: never;
+    path: {
+        /**
+         * Task Id
+         */
+        task_id: number;
+    };
+    query?: never;
+    url: '/api/tasks/{task_id}';
+};
+
+export type GetTaskErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type GetTaskError = GetTaskErrors[keyof GetTaskErrors];
+
+export type GetTaskResponses = {
+    /**
+     * Successful Response
+     */
+    200: TaskResponse;
+};
+
+export type GetTaskResponse = GetTaskResponses[keyof GetTaskResponses];

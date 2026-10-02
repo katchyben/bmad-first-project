@@ -1,5 +1,7 @@
-"""A task: its shape, its statuses, the value rules for creating one and its view."""
+"""A task: its shape, its statuses, the value rules for creating one, its view
+and the list order."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -13,6 +15,7 @@ BLANK_TITLE_MESSAGE = "Enter a title."
 TITLE_TOO_LONG_MESSAGE = "Keep the title to 200 characters or fewer."
 DESCRIPTION_TOO_LONG_MESSAGE = "Keep the description to 5,000 characters or fewer."
 PAST_DUE_MESSAGE = "That time has already passed."
+TASK_NOT_FOUND_MESSAGE = "That task no longer exists."
 
 
 class TaskStatus(StrEnum):
@@ -102,3 +105,20 @@ def view_task(task: Task, now: datetime) -> TaskView:
     """The task seen at `now`: overdue exactly when `due_at` is before `now`."""
     _require_aware(now, "now")
     return TaskView(task=task, is_overdue=task.due_at < now)
+
+
+def _urgency_key(task: Task) -> tuple[datetime, int, datetime, int]:
+    if task.id is None:
+        raise ValueError(f"only stored tasks can be ordered, got {task!r}")
+    in_progress_first = 0 if task.status is TaskStatus.IN_PROGRESS else 1
+    return (task.due_at, in_progress_first, task.created_at, task.id)
+
+
+def order_tasks(tasks: Iterable[Task]) -> list[Task]:
+    """Stored active tasks in urgency order, as a new list.
+
+    `due_at` ascending, then In progress before To do, then `created_at`
+    ascending, then `id` ascending, so the order never depends on the input.
+    Where finished tasks go is Epic 3's to decide.
+    """
+    return sorted(tasks, key=_urgency_key)

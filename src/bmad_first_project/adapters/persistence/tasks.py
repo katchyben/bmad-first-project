@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from bmad_first_project.adapters.persistence.tables import TaskRow
@@ -46,3 +47,8 @@ class SqlTaskRepository:
     def get(self, task_id: int) -> Task | None:
         row = self._session.get(TaskRow, task_id)
         return None if row is None else _to_domain(row)
+
+    def list(self) -> list[Task]:
+        # No ORDER BY: the order belongs to the domain.
+        rows = self._session.scalars(select(TaskRow)).all()
+        return [_to_domain(row) for row in rows]

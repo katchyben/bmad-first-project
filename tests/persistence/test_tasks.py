@@ -143,6 +143,18 @@ def test_get_of_a_missing_id_returns_none(migrated_engine: Engine) -> None:
         assert uow.tasks.get(999) is None
 
 
+def test_list_returns_every_stored_task(migrated_engine: Engine) -> None:
+    with SqlUnitOfWork(migrated_engine) as uow:
+        assert uow.tasks.list() == []
+        added = [uow.tasks.add(_task(title)) for title in ("One", "Two", "Three")]
+
+    with SqlUnitOfWork(migrated_engine) as uow:
+        listed = uow.tasks.list()
+
+    assert sorted(listed, key=lambda task: task.id or 0) == added
+    assert all(task.due_at.tzinfo is UTC for task in listed)
+
+
 def test_rollback_stores_nothing(migrated_engine: Engine) -> None:
     class Boom(Exception):
         pass

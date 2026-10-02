@@ -96,3 +96,23 @@ def create_task(
     """Create a To do task, due at `due_at`, and return it."""
     view = tasks.create_task(uow, now, body.title, body.description, body.due_at)
     return TaskResponse.from_view(view)
+
+
+@router.get("", response_model=list[TaskResponse], responses=error_responses(401))
+def list_tasks(
+    session: CurrentSessionDep, uow: UnitOfWorkDep, now: NowDep
+) -> list[TaskResponse]:
+    """Every task, in urgency order, as it looks now."""
+    return [TaskResponse.from_view(view) for view in tasks.list_tasks(uow, now)]
+
+
+@router.get(
+    "/{task_id}",
+    response_model=TaskResponse,
+    responses=error_responses(401, 404),
+)
+def get_task(
+    session: CurrentSessionDep, task_id: int, uow: UnitOfWorkDep, now: NowDep
+) -> TaskResponse:
+    """One task by its ID, as it looks now."""
+    return TaskResponse.from_view(tasks.get_task(uow, now, task_id))

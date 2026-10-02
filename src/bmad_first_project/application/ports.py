@@ -61,7 +61,14 @@ class TaskRepository(Protocol):
         ...
 
     def get(self, task_id: int) -> Task | None:
-        """The task with this ID, or None when there is none."""
+        """The task with this ID, or None when there is none.
+
+        `task_id` must be a 64-bit signed integer; callers check the range.
+        """
+        ...
+
+    def list(self) -> list[Task]:
+        """Every stored task, in no particular order."""
         ...
 
 

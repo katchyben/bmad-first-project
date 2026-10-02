@@ -3,7 +3,7 @@
 
 import { type Client, type ClientMeta, type Options as Options2, type RequestResult, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { CreateTaskData, CreateTaskErrors, CreateTaskResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses } from './types.gen';
+import type { CreateTaskData, CreateTaskErrors, CreateTaskResponses, GetTaskData, GetTaskErrors, GetTaskResponses, ListTasksData, ListTasksErrors, ListTasksResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -46,6 +46,17 @@ export const logout = <ThrowOnError extends boolean = false>(options?: Options<L
 });
 
 /**
+ * List Tasks
+ *
+ * Every task, in urgency order, as it looks now.
+ */
+export const listTasks = <ThrowOnError extends boolean = false>(options?: Options<ListTasksData, ThrowOnError>): RequestResult<ListTasksResponses, ListTasksErrors, ThrowOnError> => (options?.client ?? client).get<ListTasksResponses, ListTasksErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/tasks',
+    ...options
+});
+
+/**
  * Create Task
  *
  * Create a To do task, due at `due_at`, and return it.
@@ -58,4 +69,15 @@ export const createTask = <ThrowOnError extends boolean = false>(options: Option
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Get Task
+ *
+ * One task by its ID, as it looks now.
+ */
+export const getTask = <ThrowOnError extends boolean = false>(options: Options<GetTaskData, ThrowOnError>): RequestResult<GetTaskResponses, GetTaskErrors, ThrowOnError> => (options.client ?? client).get<GetTaskResponses, GetTaskErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/tasks/{task_id}',
+    ...options
 });
