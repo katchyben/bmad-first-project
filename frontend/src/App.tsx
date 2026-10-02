@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { useAuth } from '@/auth/useAuth';
 import { Toaster } from '@/components/ui/sonner';
 import { LoginScreen } from '@/screens/LoginScreen';
+import { MainScreen } from '@/screens/MainScreen';
 
 // The e2e design fixture exists only in dev builds; production drops it.
 const DesignCheck = import.meta.env.DEV ? lazy(() => import('./DesignCheck')) : null;
@@ -20,14 +21,6 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-/** The logged-in view. A placeholder until the main screen arrives (1.6b, Epic 2). */
-function LoggedIn() {
-  useEffect(() => {
-    document.title = 'Today — Todo';
-  }, []);
-  return <main>Todo</main>;
-}
-
 function Content() {
   const { loggedIn, logIn } = useAuth();
   if (DesignCheck && new URLSearchParams(window.location.search).has('design-check')) {
@@ -38,7 +31,7 @@ function Content() {
     );
   }
   // Nothing but Login is reachable without a token.
-  return loggedIn ? <LoggedIn /> : <LoginScreen onLoggedIn={logIn} />;
+  return loggedIn ? <MainScreen /> : <LoginScreen onLoggedIn={logIn} />;
 }
 
 export default function App() {

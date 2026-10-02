@@ -18,7 +18,15 @@ export function createQueryClient(): QueryClient {
   return new QueryClient({
     // A failure with nothing specific to say shows the fallback error toast.
     queryCache: new QueryCache({ onError: handleGlobalError }),
-    mutationCache: new MutationCache({ onError: handleGlobalError }),
+    // A mutation can opt out with `meta: { globalErrorToast: false }` when a
+    // failure has nothing to tell the user (e.g. Log out, which ends the
+    // session locally whatever the server says).
+    mutationCache: new MutationCache({
+      onError: (error, _variables, _context, mutation) => {
+        if (mutation.meta?.globalErrorToast === false) return;
+        handleGlobalError(error);
+      },
+    }),
     defaultOptions: {
       queries: {
         retry: shouldRetryQuery,

@@ -174,10 +174,11 @@ test('without ?design-check the app renders, not the fixture', async ({ page }) 
   await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
   await expect(page.getByTestId('button')).toHaveCount(0);
 
-  // With a stored token, the logged-in placeholder.
+  // With a stored token, the main screen. The fake token works only while the
+  // main screen makes no API call; once Epic 2 adds a task query, mock it here.
   await page.evaluate(() => localStorage.setItem('todo.auth_token', 'any'));
   await page.reload();
-  await expect(page.getByRole('main')).toHaveText('Todo');
+  await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible();
   await expect(page.getByTestId('button')).toHaveCount(0);
 });
 

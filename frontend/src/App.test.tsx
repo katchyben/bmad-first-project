@@ -122,7 +122,9 @@ describe('no token', () => {
     // Visible labels name the fields.
     expect(document.querySelector(`label[for="${username()!.id}"]`)?.textContent).toBe('Username');
     expect(document.querySelector(`label[for="${password()!.id}"]`)?.textContent).toBe('Password');
-    expect(document.querySelector('main')?.textContent).not.toBe('Todo');
+    expect(document.querySelector('h1')?.textContent).toBe('Todo App');
+    // Nothing of the main screen is reachable.
+    expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Log out')).toBe(false);
   });
 });
 
@@ -130,7 +132,7 @@ describe('stored token', () => {
   it('shows the logged-in view with its title', async () => {
     setToken('stored');
     await renderApp();
-    expect(document.querySelector('main')?.textContent).toBe('Todo');
+    expect(document.querySelector('h1')?.textContent).toBe('Today');
     expect(document.title).toBe('Today — Todo');
     expect(username()).toBeNull();
   });
@@ -159,7 +161,7 @@ describe('valid login', () => {
     expect(body.get('password')).toBe('secret');
 
     await act(async () => release());
-    await vi.waitFor(() => expect(document.querySelector('main')?.textContent).toBe('Todo'));
+    await vi.waitFor(() => expect(document.querySelector('h1')?.textContent).toBe('Today'));
     expect(localStorage.getItem(TOKEN_KEY)).toBe('fresh-token');
     expect(document.title).toBe('Today — Todo');
     expect(queryClient.getQueryData(['old-session'])).toBeUndefined();
@@ -299,7 +301,7 @@ describe('another tab', () => {
       window.dispatchEvent(new StorageEvent('storage', { key: TOKEN_KEY }));
     });
 
-    expect(document.querySelector('main')?.textContent).toBe('Todo');
+    expect(document.querySelector('h1')?.textContent).toBe('Today');
     await expectReset();
   });
 
