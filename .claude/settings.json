@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(.claude/skills/**)",
+      "Edit(.agents/skills/**)",
+      "Edit(_bmad/_config/**)",
+      "Edit(_bmad/bmad-loop/**)",
+      "Edit(_bmad/bmb/**)",
+      "Edit(_bmad/bmm/**)",
+      "Edit(_bmad/cis/**)",
+      "Edit(_bmad/core/**)",
+      "Edit(_bmad/render/**)",
+      "Edit(_bmad/scripts/**)",
+      "Edit(_bmad/tea/**)",
+      "Edit(_bmad/config.toml)",
+      "Edit(_bmad/config.user.toml)"
+    ]
+  }
+}
